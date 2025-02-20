@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/nirob/Project/bazarBD/logs/winston/errors/.dc66b4bab27a25f29e78349a7f5dd46e05129261-audit.json",
+    "files": [
+        {
+            "date": 1740068332788,
+            "name": "/home/nirob/Project/bazarBD/logs/winston/errors/backend-2025-20-02-22-error.log",
+            "hash": "cde6b630be45978678d3dac3163be87a0032202df6c0260a72d974144464c13d"
+        }
+    ],
+    "hashType": "sha256"
+}

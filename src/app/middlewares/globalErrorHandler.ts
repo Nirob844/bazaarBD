@@ -1,11 +1,17 @@
-/* eslint-disable no-console */
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-unused-expressions */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import config from '../../config';
 import ApiError from '../../errors/ApiError';
 import handleValidationError from '../../errors/handleValidationError';
+
+import { Prisma } from '@prisma/client';
+import { ZodError } from 'zod';
+import handleClientError from '../../errors/handleClientError';
+import handleZodError from '../../errors/handleZodError';
 import { IGenericErrorMessage } from '../../interfaces/error';
-import { errorLogger } from '../../shared/logger';
+import { errorlogger } from '../../shared/logger';
 
 const globalErrorHandler: ErrorRequestHandler = (
   error,
@@ -13,22 +19,32 @@ const globalErrorHandler: ErrorRequestHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  config.env == 'development'
-    ? console.log('global handler ~`', error)
-    : errorLogger.error('global error handler', error);
+  config.env === 'development'
+    ? console.log(`🐱‍🏍 globalErrorHandler ~~`, { error })
+    : errorlogger.error(`🐱‍🏍 globalErrorHandler ~~`, error);
 
   let statusCode = 500;
   let message = 'Something went wrong !';
   let errorMessages: IGenericErrorMessage[] = [];
 
-  if (error?.name === 'ValidationError') {
+  if (error instanceof Prisma.PrismaClientValidationError) {
     const simplifiedError = handleValidationError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorMessages = simplifiedError.errorMessages;
+  } else if (error instanceof ZodError) {
+    const simplifiedError = handleZodError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorMessages = simplifiedError.errorMessages;
+  } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    const simplifiedError = handleClientError(error);
     statusCode = simplifiedError.statusCode;
     message = simplifiedError.message;
     errorMessages = simplifiedError.errorMessages;
   } else if (error instanceof ApiError) {
     statusCode = error?.statusCode;
-    message = error?.message;
+    message = error.message;
     errorMessages = error?.message
       ? [
           {
@@ -55,8 +71,6 @@ const globalErrorHandler: ErrorRequestHandler = (
     errorMessages,
     stack: config.env !== 'production' ? error?.stack : undefined,
   });
-
-  next();
 };
 
 export default globalErrorHandler;

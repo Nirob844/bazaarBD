@@ -1,0 +1,200 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id          String    @id @default(uuid())
+  username    String    @unique
+  email       String    @unique
+  password    String
+  role        UserRole  @default(CUSTOMER)
+  is_verified Boolean   @default(false)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  profile     Profile?
+  profile_id  String?
+  Product     Product[]
+  Order       Order[]
+  Cart        Cart[]
+}
+
+// Profile model
+model Profile {
+  id                  String    @id @default(uuid())
+  full_name           String?
+  phone_number        String?
+  bio                 String?
+  profile_picture_url String?
+  gender              String?
+  date_of_birth       DateTime?
+  address             String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  user_id             String    @unique
+  user                User      @relation(fields: [user_id], references: [id])
+}
+
+// InventoryHistory model
+model InventoryHistory {
+  id               String    @id @default(uuid())
+  inventory_id     String
+  action_type      String
+  quantity_changed Int
+  last_quantity    Int
+  new_quantity     Int
+  created_at       DateTime  @default(now())
+  inventory        Inventory @relation(fields: [inventory_id], references: [id])
+}
+
+// Category model
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  products    Product[]
+}
+
+// Inventory model
+model Inventory {
+  id                 String             @id @default(uuid())
+  product_id         String             @unique
+  stock_quantity     Int
+  min_stock_level    Int?
+  restock_date       DateTime?
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @updatedAt
+  inventoryHistories InventoryHistory[]
+  products           Product[]
+}
+
+// Product model
+model Product {
+  id           String        @id @default(uuid())
+  name         String
+  description  String
+  price        Decimal
+  sku          String        @unique
+  status       ProductStatus
+  category_id  String
+  inventory_id String
+  vendor_id    String
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  category     Category      @relation(fields: [category_id], references: [id])
+  inventory    Inventory     @relation(fields: [inventory_id], references: [id])
+  vendor       User          @relation(fields: [vendor_id], references: [id])
+  orderItems   OrderItem[]
+  CartItem     CartItem[]
+}
+
+// Order model
+model Order {
+  id               String      @id @default(uuid())
+  user_id          String
+  total_price      Decimal
+  payment_status   String
+  status           OrderStatus
+  shipping_address String
+  shipping_method  String?
+  payment_method   String
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  shipped_at       DateTime?
+  delivered_at     DateTime?
+  user             User        @relation(fields: [user_id], references: [id])
+  orderItems       OrderItem[]
+  Payment          Payment?
+}
+
+// OrderItem model
+model OrderItem {
+  id         String   @id @default(uuid())
+  order_id   String
+  product_id String
+  quantity   Int
+  price      Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  order      Order    @relation(fields: [order_id], references: [id])
+  product    Product  @relation(fields: [product_id], references: [id])
+}
+
+// Cart model
+model Cart {
+  id         String     @id @default(uuid())
+  user_id    String
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  user       User       @relation(fields: [user_id], references: [id])
+  cartItems  CartItem[]
+}
+
+// CartItem model
+model CartItem {
+  id         String   @id @default(uuid())
+  cart_id    String
+  product_id String
+  quantity   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  cart       Cart     @relation(fields: [cart_id], references: [id])
+  products   Product  @relation(fields: [product_id], references: [id])
+}
+
+// Payment model
+model Payment {
+  id                   String        @id @default(uuid())
+  order_id             String        @unique
+  payment_method       String
+  amount               Decimal
+  status               PaymentStatus
+  payment_reference_id String?
+  payment_date         DateTime      @default(now())
+  currency             String        @default("BDT")
+  created_at           DateTime      @default(now())
+  updated_at           DateTime      @updatedAt
+  order                Order         @relation(fields: [order_id], references: [id])
+}
+
+// Enums
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  VENDOR
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
