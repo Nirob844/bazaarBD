@@ -1,4 +1,4 @@
-import { getUserByEmail, isPasswordMatched } from './auth.utils';
+import { comparePassword, getUserByEmail, hashPassword } from './auth.utils';
 
 import httpStatus from 'http-status';
 
@@ -8,11 +8,41 @@ import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
-import { ILoginUser, ILoginUserResponse } from './auth.interface';
+import {
+  ILoginUser,
+  ILoginUserResponse,
+  UserWithProfile,
+} from './auth.interface';
 
-const registerUser = async (data: User): Promise<User> => {
+const registerUser = async (data: UserWithProfile): Promise<User> => {
+  // Check if the email or username already exists
+  const isUserExist = await getUserByEmail(data.email);
+
+  if (isUserExist) {
+    throw new Error('Email is already in use!');
+  }
+  // Hash the password before storing it using the utility
+  const hashedPassword = await hashPassword(data.password);
+
+  // Create user and profile in a transaction
   const result = await prisma.user.create({
-    data,
+    data: {
+      full_name: data.full_name,
+      phone_number: data.phone_number,
+      email: data.email,
+      password: hashedPassword,
+      role: data.role,
+
+      profile: {
+        create: {
+          bio: data.profile?.bio || '',
+          profile_picture_url: data.profile?.profile_picture_url || '',
+          gender: data.profile?.gender || '',
+          date_of_birth: data.profile?.date_of_birth || null,
+          address: data.profile?.address || '',
+        },
+      },
+    },
   });
 
   return result;
@@ -29,10 +59,11 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   if (!isUserExist) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
   }
-  if (
-    isUserExist.password &&
-    !(await isPasswordMatched(password, isUserExist.password))
-  ) {
+
+  // Use comparePassword to check if the provided password matches the stored hashed password
+  const passwordMatched = await comparePassword(password, isUserExist.password);
+
+  if (!passwordMatched) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Password is incorrect');
   }
 
@@ -44,7 +75,7 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     config.jwt.secret as Secret,
     config.jwt.expires_in as string
   );
-
+  // console.log('accessToken', accessToken);
   const refreshToken = jwtHelpers.createToken(
     { userId, role },
     config.jwt.refresh_secret as Secret,

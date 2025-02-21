@@ -15,26 +15,23 @@ datasource db {
 
 // User model
 model User {
-  id          String    @id @default(uuid())
-  username    String    @unique
-  email       String    @unique
-  password    String
-  role        UserRole  @default(CUSTOMER)
-  is_verified Boolean   @default(false)
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-  profile     Profile?
-  profile_id  String?
-  Product     Product[]
-  Order       Order[]
-  Cart        Cart[]
+  id           String    @id @default(uuid())
+  full_name    String
+  phone_number String
+  email        String    @unique
+  password     String
+  role         UserRole  @default(CUSTOMER)
+  is_verified  Boolean   @default(false)
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  profile      Profile?
+  Product      Product[]
+  Order        Order[]
+  Cart         Cart[]
 }
 
-// Profile model
 model Profile {
   id                  String    @id @default(uuid())
-  full_name           String?
-  phone_number        String?
   bio                 String?
   profile_picture_url String?
   gender              String?
@@ -43,7 +40,7 @@ model Profile {
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   user_id             String    @unique
-  user                User      @relation(fields: [user_id], references: [id])
+  user                User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 // InventoryHistory model
