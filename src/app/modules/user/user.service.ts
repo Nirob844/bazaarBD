@@ -74,9 +74,9 @@ const getSingleUser = async (id: string): Promise<User | null> => {
     where: {
       id,
     },
-    // include: {
-    //   posts: true,
-    // },
+    include: {
+      profile: true,
+    },
   });
 
   return result;
