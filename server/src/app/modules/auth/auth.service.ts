@@ -31,6 +31,16 @@ const registerUser = async (data: UserWithProfile): Promise<User> => {
       email: data.email,
       password: hashedPassword,
       role: data.role,
+      profile: {
+        create: {
+          bio: data.profile?.bio ?? '',
+          avatar: data.profile?.avatar ?? '',
+          phone: data.profile?.phone ?? '',
+          address: data.profile?.address ?? '',
+          dob: data.profile?.dob ?? '',
+          gender: data.profile?.gender ?? '',
+        },
+      },
     },
   });
 

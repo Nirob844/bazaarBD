@@ -14,12 +14,11 @@ export type IRefreshTokenResponse = {
 
 export type UserWithProfile = User & {
   profile?: {
-    full_name: string;
-    phone_number: string;
-    bio: string;
-    profile_picture_url: string;
-    gender: string;
-    date_of_birth: Date;
-    address: string;
+    bio?: string;
+    avatar?: string;
+    phone?: string;
+    address?: string;
+    gender?: string;
+    dob?: Date;
   };
 };

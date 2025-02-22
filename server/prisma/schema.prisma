@@ -9,16 +9,34 @@ datasource db {
 
 // User model
 model User {
+  id                 String              @id @default(uuid())
+  name               String
+  email              String              @unique
+  password           String
+  role               UserRole            @default(CUSTOMER)
+  isVerified         Boolean             @default(false) // Fix name
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  profile            UserProfile?
+  products           Product[]
+  orders             Order[]
+  cart               Cart?
+  payments           Payment[] // Fix relation name
+  emailNotifications EmailNotification[]
+}
+
+model UserProfile {
   id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  role      UserRole  @default(CUSTOMER)
+  userId    String    @unique
+  bio       String?
+  avatar    String? // Profile picture URL
+  phone     String? // Optional phone number
+  address   String? // Optional address
+  dob       DateTime? // Date of birth
+  gender    String? // Optional gender
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  products  Product[]
-  orders    Order[]
-  cart      Cart?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Product model
@@ -80,6 +98,7 @@ model Order {
   updatedAt DateTime    @updatedAt
   user      User        @relation(fields: [userId], references: [id])
   items     OrderItem[]
+  payments  Payment[]
 }
 
 // OrderItem model
@@ -111,6 +130,48 @@ model CartItem {
   product   Product @relation(fields: [productId], references: [id])
 }
 
+model EmailNotification {
+  id      String      @id @default(uuid())
+  userId  String
+  type    EmailType
+  subject String
+  body    String
+  sentAt  DateTime    @default(now())
+  status  EmailStatus
+  user    User        @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String // Remove unique constraint
+  userId        String
+  method        PaymentMethod
+  amount        Decimal
+  status        PaymentStatus
+  transactionId String?       @unique
+  paymentDate   DateTime      @default(now())
+  currency      String        @default("BDT")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  order         Order         @relation(fields: [orderId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+}
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  SSL_COMMERZ
+  CARD
+  COD // Cash on Delivery
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 // Enums
 enum UserRole {
   ADMIN
@@ -127,6 +188,19 @@ enum ProductStatus {
 enum ActionType {
   IN
   OUT
+}
+
+enum EmailType {
+  ACCOUNT_CONFIRMATION
+  ORDER_CONFIRMATION
+  PAYMENT_SUCCESS
+  PASSWORD_RESET
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 enum OrderStatus {
