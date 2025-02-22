@@ -55,16 +55,6 @@ model InventoryHistory {
   inventory        Inventory @relation(fields: [inventory_id], references: [id])
 }
 
-// Category model
-model Category {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
-}
-
 // Inventory model
 model Inventory {
   id                 String             @id @default(uuid())
@@ -76,6 +66,16 @@ model Inventory {
   updatedAt          DateTime           @updatedAt
   inventoryHistories InventoryHistory[]
   products           Product[]
+}
+
+// Category model
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
 }
 
 // Product model
