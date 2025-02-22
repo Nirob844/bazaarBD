@@ -27,21 +27,10 @@ const registerUser = async (data: UserWithProfile): Promise<User> => {
   // Create user and profile in a transaction
   const result = await prisma.user.create({
     data: {
-      full_name: data.full_name,
-      phone_number: data.phone_number,
+      name: data.name,
       email: data.email,
       password: hashedPassword,
       role: data.role,
-
-      profile: {
-        create: {
-          bio: data.profile?.bio || '',
-          profile_picture_url: data.profile?.profile_picture_url || '',
-          gender: data.profile?.gender || '',
-          date_of_birth: data.profile?.date_of_birth || null,
-          address: data.profile?.address || '',
-        },
-      },
     },
   });
 
