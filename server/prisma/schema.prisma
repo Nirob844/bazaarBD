@@ -14,7 +14,7 @@ model User {
   email              String              @unique
   password           String
   role               UserRole            @default(CUSTOMER)
-  isVerified         Boolean             @default(false) // Fix name
+  isVerified         Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   profile            UserProfile?
@@ -29,11 +29,11 @@ model UserProfile {
   id        String    @id @default(uuid())
   userId    String    @unique
   bio       String?
-  avatar    String? // Profile picture URL
-  phone     String? // Optional phone number
-  address   String? // Optional address
-  dob       DateTime? // Date of birth
-  gender    String? // Optional gender
+  avatar    String?
+  phone     String?
+  address   String?
+  dob       DateTime?
+  gender    String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -143,7 +143,7 @@ model EmailNotification {
 
 model Payment {
   id            String        @id @default(uuid())
-  orderId       String // Remove unique constraint
+  orderId       String
   userId        String
   method        PaymentMethod
   amount        Decimal

@@ -9,17 +9,17 @@ router.get('/', ProductController.getAllFromDB);
 router.get('/:id', ProductController.getDataById);
 router.post(
   '/create-product',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.VENDOR),
+  auth(ENUM_USER_ROLE.ADMIN),
   ProductController.insertIntoDB
 );
 router.patch(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.VENDOR),
+  auth(ENUM_USER_ROLE.ADMIN),
   ProductController.updateOneInDB
 );
 router.delete(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.VENDOR),
+  auth(ENUM_USER_ROLE.ADMIN),
   ProductController.deleteByIdFromDB
 );
 

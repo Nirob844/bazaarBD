@@ -93,7 +93,7 @@ const getDataById = async (id: string): Promise<Product | null> => {
     include: {
       inventory: {
         include: {
-          inventoryHistories: true,
+          history: true,
         },
       },
     },
