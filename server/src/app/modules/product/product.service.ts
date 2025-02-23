@@ -10,11 +10,19 @@ import {
 } from './product.constants';
 
 const insertIntoDB = async (data: Product): Promise<Product> => {
-  const result = await prisma.product.create({
-    data,
+  const existingSku = await prisma.product.findUnique({
+    where: { sku: data.sku },
   });
 
-  return result;
+  if (existingSku) throw new Error('SKU must be unique!');
+
+  const vendorExists = await prisma.user.findUnique({
+    where: { id: data.vendorId },
+  });
+
+  if (!vendorExists) throw new Error('Vendor not found!');
+
+  return prisma.product.create({ data });
 };
 
 const getAllFromDB = async (
@@ -86,11 +94,16 @@ const getAllFromDB = async (
 };
 
 const getDataById = async (id: string): Promise<Product | null> => {
-  const result = await prisma.product.findUnique({
-    where: {
-      id,
-    },
+  return prisma.product.findUnique({
+    where: { id },
     include: {
+      category: true,
+      vendor: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
       inventory: {
         include: {
           history: true,
@@ -98,30 +111,53 @@ const getDataById = async (id: string): Promise<Product | null> => {
       },
     },
   });
-
-  return result;
 };
 
 const updateOneInDB = async (
   id: string,
   payload: Partial<Product>
 ): Promise<Product> => {
-  const result = await prisma.product.update({
-    where: {
-      id,
-    },
+  if (payload.sku) {
+    const existingSku = await prisma.product.findUnique({
+      where: { sku: payload.sku },
+    });
+    if (existingSku && existingSku.id !== id)
+      throw new Error('SKU must be unique!');
+  }
+
+  return prisma.product.update({
+    where: { id },
     data: payload,
+    include: {
+      category: true,
+      vendor: true,
+      inventory: true,
+    },
   });
-  return result;
 };
 
 const deleteByIdFromDB = async (id: string): Promise<Product> => {
-  const result = await prisma.product.delete({
+  const hasOrders = await prisma.orderItem.findFirst({
     where: {
-      id,
+      productId: id,
     },
   });
-  return result;
+  if (hasOrders) throw new Error('Cannot delete product with active orders!');
+
+  await prisma.cartItem.deleteMany({
+    where: {
+      productId: id,
+    },
+  });
+  await prisma.inventory.deleteMany({
+    where: {
+      productId: id,
+    },
+  });
+
+  return prisma.product.delete({
+    where: { id },
+  });
 };
 
 export const ProductService = {

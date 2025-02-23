@@ -24,21 +24,23 @@ const registerUser = async (data: UserWithProfile): Promise<User> => {
   // Hash the password before storing it using the utility
   const hashedPassword = await hashPassword(data.password);
 
+  const { name, email, role, profile } = data;
+
   // Create user and profile in a transaction
   const result = await prisma.user.create({
     data: {
-      name: data.name,
-      email: data.email,
+      name: name,
+      email: email,
       password: hashedPassword,
-      role: data.role,
+      role: role,
       profile: {
         create: {
-          bio: data.profile?.bio ?? '',
-          avatar: data.profile?.avatar ?? '',
-          phone: data.profile?.phone ?? '',
-          address: data.profile?.address ?? '',
-          dob: data.profile?.dob ?? '',
-          gender: data.profile?.gender ?? '',
+          bio: profile?.bio ?? '',
+          avatar: profile?.avatar ?? '',
+          phone: profile?.phone ?? '',
+          address: profile?.address ?? '',
+          dob: profile?.dob ?? '',
+          gender: profile?.gender ?? '',
         },
       },
     },

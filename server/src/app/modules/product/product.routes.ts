@@ -7,11 +7,7 @@ const router = express.Router();
 
 router.get('/', ProductController.getAllFromDB);
 router.get('/:id', ProductController.getDataById);
-router.post(
-  '/create-product',
-  auth(ENUM_USER_ROLE.ADMIN),
-  ProductController.insertIntoDB
-);
+router.post('/', auth(ENUM_USER_ROLE.ADMIN), ProductController.insertIntoDB);
 router.patch(
   '/:id',
   auth(ENUM_USER_ROLE.ADMIN),
