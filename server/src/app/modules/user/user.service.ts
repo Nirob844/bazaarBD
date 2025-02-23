@@ -76,6 +76,8 @@ const getSingleUser = async (id: string): Promise<User | null> => {
     },
     include: {
       profile: true,
+      cart: true,
+      orders: true,
     },
   });
 
