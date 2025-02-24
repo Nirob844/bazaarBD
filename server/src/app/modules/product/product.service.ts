@@ -1,28 +1,62 @@
-import { Prisma, Product } from '@prisma/client';
+import { Inventory, Prisma, Product } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
+import { InventoryService } from '../inventory/inventory.service';
 import {
   productRelationalFields,
   productRelationalFieldsMapper,
   productSearchAbleFields,
 } from './product.constants';
 
-const insertIntoDB = async (data: Product): Promise<Product> => {
+// const insertIntoDB = async (data: Product): Promise<Product> => {
+//   const existingSku = await prisma.product.findUnique({
+//     where: { sku: data.sku },
+//   });
+
+//   if (existingSku) throw new Error('SKU must be unique!');
+
+//   const vendorExists = await prisma.user.findUnique({
+//     where: { id: data.vendorId },
+//   });
+
+//   if (!vendorExists) throw new Error('Vendor not found!');
+
+//   return prisma.product.create({ data });
+// };
+
+const insertIntoDB = async (
+  data: Product & { inventory?: Inventory }
+): Promise<Product> => {
+  const { inventory, ...productData } = data;
+  // Check if SKU is unique
   const existingSku = await prisma.product.findUnique({
-    where: { sku: data.sku },
+    where: { sku: productData.sku },
   });
 
   if (existingSku) throw new Error('SKU must be unique!');
 
+  // Check if Vendor exists
   const vendorExists = await prisma.user.findUnique({
-    where: { id: data.vendorId },
+    where: { id: productData.vendorId },
   });
 
   if (!vendorExists) throw new Error('Vendor not found!');
 
-  return prisma.product.create({ data });
+  // Create Product
+  const product = await prisma.product.create({ data: productData });
+
+  // Only create inventory if stock is provided
+  if (inventory) {
+    const data: any = {
+      productId: product.id,
+      stock: inventory.stock,
+    };
+    InventoryService.insertIntoDB(data);
+  }
+
+  return product;
 };
 
 const getAllFromDB = async (
@@ -78,6 +112,13 @@ const getAllFromDB = async (
         : {
             createdAt: 'desc',
           },
+    include: {
+      inventory: {
+        select: {
+          stock: true,
+        },
+      },
+    },
   });
   const total = await prisma.product.count({
     where: whereConditions,
