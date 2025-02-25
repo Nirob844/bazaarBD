@@ -41,6 +41,13 @@ const getAllFromDB = async (
     where: whereConditions,
     skip,
     take: limit,
+    include: {
+      product: {
+        select: {
+          name: true,
+        },
+      },
+    },
     // orderBy:
     //   options.sortBy && options.sortOrder
     //     ? { [options.sortBy]: options.sortOrder }
@@ -68,8 +75,8 @@ const getDataById = async (id: string): Promise<Inventory | null> => {
       id,
     },
     include: {
-      history: true,
       product: true,
+      history: true,
     },
   });
 
@@ -85,26 +92,30 @@ const updateOneInDB = async (
   });
 
   if (!existingInventory) throw new Error('Inventory not found!');
-
+  let updatedStock = existingInventory.stock;
   if (payload.stock !== undefined) {
     if (payload.stock < 0) throw new Error('Stock cannot be negative!');
+
+    updatedStock += payload.stock; // Add new stock to existing stock
 
     await prisma.inventoryHistory.create({
       data: {
         inventoryId: id,
-        action: payload.stock > existingInventory.stock ? 'IN' : 'OUT',
-        quantityChange: Math.abs(payload.stock - existingInventory.stock),
+        action: payload.stock > 0 ? 'IN' : 'OUT',
+        quantityChange: payload.stock,
         previousStock: existingInventory.stock,
-        newStock: payload.stock,
+        newStock: updatedStock,
       },
     });
   }
 
-  return prisma.inventory.update({
+  const updatedInventory = await prisma.inventory.update({
     where: { id },
-    data: payload,
+    data: { ...payload, stock: updatedStock },
     include: { history: true },
   });
+
+  return updatedInventory;
 };
 
 const deleteByIdFromDB = async (id: string): Promise<Inventory> => {
