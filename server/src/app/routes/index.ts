@@ -37,11 +37,11 @@ const moduleRoutes = [
     route: InventoryRoutes,
   },
   {
-    path: 'cart',
+    path: '/cart',
     route: CartRoutes,
   },
   {
-    path: 'orders',
+    path: '/orders',
     route: OrderRoutes,
   },
 ];

@@ -39,7 +39,7 @@ const registerUser = async (data: UserWithProfile): Promise<User> => {
           avatar: profile?.avatar ?? '',
           phone: profile?.phone ?? '',
           address: profile?.address ?? '',
-          dob: profile?.dob ?? '',
+          dob: profile?.dob ?? new Date(),
           gender: profile?.gender ?? '',
         },
       },

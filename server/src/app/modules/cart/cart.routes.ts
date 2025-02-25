@@ -13,7 +13,7 @@ router.get(
 
 router.get(
   '/user/:userId',
-  auth(ENUM_USER_ROLE.CUSTOMER),
+  auth(ENUM_USER_ROLE.CUSTOMER, ENUM_USER_ROLE.ADMIN),
   CartController.getCartByUserId
 );
 

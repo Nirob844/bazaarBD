@@ -113,6 +113,11 @@ const getAllFromDB = async (
             createdAt: 'desc',
           },
     include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
       inventory: {
         select: {
           stock: true,
