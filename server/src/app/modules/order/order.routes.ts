@@ -17,4 +17,14 @@ router.get(
   OrderController.getUserOrders
 );
 
+router.get('/all', auth(ENUM_USER_ROLE.ADMIN), OrderController.getAllOrders);
+router.get('/:id', auth(ENUM_USER_ROLE.ADMIN), OrderController.getDataById);
+router.patch(
+  '/:id/status',
+  auth(ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN),
+  OrderController.updateOrderStatus
+);
+
+router.delete('/:id', auth(ENUM_USER_ROLE.ADMIN), OrderController.deleteOrder);
+
 export const OrderRoutes = router;

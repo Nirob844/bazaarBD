@@ -92,30 +92,32 @@ const updateOneInDB = async (
   });
 
   if (!existingInventory) throw new Error('Inventory not found!');
-  let updatedStock = existingInventory.stock;
+
   if (payload.stock !== undefined) {
     if (payload.stock < 0) throw new Error('Stock cannot be negative!');
 
-    updatedStock += payload.stock; // Add new stock to existing stock
-
-    await prisma.inventoryHistory.create({
+    await prisma.inventory.update({
+      where: { id },
       data: {
-        inventoryId: id,
-        action: payload.stock > 0 ? 'IN' : 'OUT',
-        quantityChange: payload.stock,
-        previousStock: existingInventory.stock,
-        newStock: updatedStock,
+        stock: {
+          increment: payload.stock, // Adds new stock safely
+        },
+        history: {
+          create: {
+            action: 'IN',
+            quantityChange: payload.stock,
+            previousStock: existingInventory.stock,
+            newStock: existingInventory.stock + payload.stock,
+          },
+        },
       },
     });
   }
 
-  const updatedInventory = await prisma.inventory.update({
+  return prisma.inventory.findUnique({
     where: { id },
-    data: { ...payload, stock: updatedStock },
     include: { history: true },
-  });
-
-  return updatedInventory;
+  }) as Promise<Inventory>;
 };
 
 const deleteByIdFromDB = async (id: string): Promise<Inventory> => {

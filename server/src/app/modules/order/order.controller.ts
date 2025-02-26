@@ -26,6 +26,32 @@ const cartToOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// 📦 Get All Orders
+const getAllOrders = catchAsync(async (req: Request, res: Response) => {
+  const options = pick(req.query, paginationFields);
+  const result = await OrderService.getAllOrders(options);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User orders fetched successfully!',
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+// 📦 Get Orders for Id
+const getDataById = catchAsync(async (req: Request, res: Response) => {
+  const result = await OrderService.getDataById(req.params.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User orders fetched successfully!',
+    data: result,
+  });
+});
+
 // 📦 Get Orders for a User
 const getUserOrders = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user as JwtPayload;
@@ -48,7 +74,53 @@ const getUserOrders = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// ✅ Update Order Status
+const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+
+  if (!orderId || !status) {
+    return res.status(httpStatus.BAD_REQUEST).json({
+      success: false,
+      message: 'Order ID and status are required!',
+    });
+  }
+
+  const result = await OrderService.updateOrderStatus(orderId, status);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Order status updated successfully!',
+    data: result,
+  });
+});
+
+// ❌ Delete Order
+const deleteOrder = catchAsync(async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+
+  if (!orderId) {
+    return res.status(httpStatus.BAD_REQUEST).json({
+      success: false,
+      message: 'Order ID is required!',
+    });
+  }
+
+  await OrderService.deleteOrder(orderId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.NO_CONTENT,
+    success: true,
+    message: 'Order deleted successfully!',
+  });
+});
+
 export const OrderController = {
   cartToOrder,
+  getAllOrders,
   getUserOrders,
+  getDataById,
+  updateOrderStatus,
+  deleteOrder,
 };
