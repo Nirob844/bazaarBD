@@ -1,6 +1,6 @@
 "use client";
 
-import { Favorite, ShoppingCart } from "@mui/icons-material";
+import { ShoppingCart } from "@mui/icons-material";
 import {
   alpha,
   Box,
@@ -151,6 +151,7 @@ export default function FeaturedProducts() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
+                      gap: 1,
                     }}
                   >
                     <Button
@@ -163,6 +164,7 @@ export default function FeaturedProducts() {
                         fontWeight: 600,
                         px: 3,
                         py: 1,
+                        flexGrow: 1,
                       }}
                     >
                       View Details
@@ -180,17 +182,6 @@ export default function FeaturedProducts() {
                       }}
                     >
                       <ShoppingCart />
-                    </IconButton>
-                    <IconButton
-                      aria-label="add to favorites"
-                      sx={{
-                        color: theme.palette.error.main,
-                        "&:hover": {
-                          backgroundColor: alpha(theme.palette.error.main, 0.1),
-                        },
-                      }}
-                    >
-                      <Favorite />
                     </IconButton>
                   </Box>
                 </CardContent>
