@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Favorite, ShoppingCart } from "@mui/icons-material";
+import { ShoppingCart } from "@mui/icons-material";
 import {
   alpha,
   Box,
@@ -240,10 +240,12 @@ export default function BestDeals() {
                         fontWeight: 600,
                         px: 3,
                         py: 1,
+                        flexGrow: 1,
                       }}
                     >
                       Shop Now
                     </Button>
+
                     <IconButton
                       aria-label="add to cart"
                       sx={{
@@ -257,17 +259,6 @@ export default function BestDeals() {
                       }}
                     >
                       <ShoppingCart />
-                    </IconButton>
-                    <IconButton
-                      aria-label="add to favorites"
-                      sx={{
-                        color: theme.palette.error.main,
-                        "&:hover": {
-                          backgroundColor: alpha(theme.palette.error.main, 0.1),
-                        },
-                      }}
-                    >
-                      <Favorite />
                     </IconButton>
                   </Box>
                 </CardContent>
