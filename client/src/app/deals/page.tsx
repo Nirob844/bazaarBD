@@ -1,7 +1,7 @@
 const Deals = () => {
   return (
     <div>
-      <p>this is deal page</p>
+      <p>this is deals page</p>
     </div>
   );
 };

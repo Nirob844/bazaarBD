@@ -119,7 +119,8 @@ export default function Navbar() {
     <AppBar
       position="sticky"
       sx={{
-        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+        // background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+        background: theme.palette.primary.main,
         boxShadow: theme.shadows[4],
         borderBottom: `1px solid ${theme.palette.divider}`,
       }}
@@ -194,6 +195,7 @@ export default function Navbar() {
           <SearchField
             fullWidth
             placeholder="Search products..."
+            sx={{ color: theme.palette.common.white }}
             startAdornment={
               <Search sx={{ color: theme.palette.common.white, mr: 1 }} />
             }
