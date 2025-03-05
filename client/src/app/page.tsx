@@ -1,3 +1,4 @@
+import Categories from "@/components/homepage/Categories";
 import Hero from "@/components/homepage/Hero";
 
 const Home = () => {
@@ -5,6 +6,7 @@ const Home = () => {
     <div>
       <div>
         <Hero />
+        <Categories />
       </div>
     </div>
   );
