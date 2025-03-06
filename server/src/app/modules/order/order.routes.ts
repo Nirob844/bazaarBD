@@ -13,7 +13,7 @@ router.post(
 
 router.get(
   '/',
-  auth(ENUM_USER_ROLE.CUSTOMER, ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN),
+  auth(ENUM_USER_ROLE.CUSTOMER, ENUM_USER_ROLE.ADMIN),
   OrderController.getUserOrders
 );
 
@@ -21,7 +21,7 @@ router.get('/all', auth(ENUM_USER_ROLE.ADMIN), OrderController.getAllOrders);
 router.get('/:id', auth(ENUM_USER_ROLE.ADMIN), OrderController.getDataById);
 router.patch(
   '/:id/status',
-  auth(ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN),
+  auth(ENUM_USER_ROLE.ADMIN),
   OrderController.updateOrderStatus
 );
 
