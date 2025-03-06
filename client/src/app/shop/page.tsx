@@ -114,7 +114,7 @@ export default function Shop() {
         }}
       >
         <Grid container spacing={3} sx={{ maxWidth: 800 }}>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={8} md={8}>
             <TextField
               fullWidth
               variant="outlined"

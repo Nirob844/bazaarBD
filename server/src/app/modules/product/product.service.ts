@@ -17,11 +17,11 @@ import {
 
 //   if (existingSku) throw new Error('SKU must be unique!');
 
-//   const vendorExists = await prisma.user.findUnique({
-//     where: { id: data.vendorId },
+//   const userExists = await prisma.user.findUnique({
+//     where: { id: data.userId },
 //   });
 
-//   if (!vendorExists) throw new Error('Vendor not found!');
+//   if (!userExists) throw new Error('Vendor not found!');
 
 //   return prisma.product.create({ data });
 // };
@@ -29,6 +29,7 @@ import {
 const insertIntoDB = async (
   data: Product & { inventory?: Inventory }
 ): Promise<Product> => {
+  console.log('data', data);
   const { inventory, ...productData } = data;
   // Check if SKU is unique
   const existingSku = await prisma.product.findUnique({
@@ -38,11 +39,11 @@ const insertIntoDB = async (
   if (existingSku) throw new Error('SKU must be unique!');
 
   // Check if Vendor exists
-  const vendorExists = await prisma.user.findUnique({
-    where: { id: productData.vendorId },
+  const userExists = await prisma.user.findUnique({
+    where: { id: productData.userId },
   });
 
-  if (!vendorExists) throw new Error('Vendor not found!');
+  if (!userExists) throw new Error('User not found!');
 
   // Create Product
   const product = await prisma.product.create({ data: productData });
@@ -113,6 +114,12 @@ const getAllFromDB = async (
             createdAt: 'desc',
           },
     include: {
+      imageUrls: {
+        select: {
+          url: true,
+          altText: true,
+        },
+      },
       category: {
         select: {
           name: true,
@@ -121,6 +128,12 @@ const getAllFromDB = async (
       inventory: {
         select: {
           stock: true,
+        },
+      },
+      promotions: {
+        select: {
+          type: true,
+          discountPercentage: true,
         },
       },
     },
@@ -143,8 +156,9 @@ const getDataById = async (id: string): Promise<Product | null> => {
   return prisma.product.findUnique({
     where: { id },
     include: {
+      imageUrls: true,
       category: true,
-      vendor: {
+      user: {
         select: {
           name: true,
           email: true,
@@ -153,6 +167,12 @@ const getDataById = async (id: string): Promise<Product | null> => {
       inventory: {
         include: {
           history: true,
+        },
+      },
+      promotions: {
+        select: {
+          type: true,
+          discountPercentage: true,
         },
       },
     },
@@ -176,7 +196,7 @@ const updateOneInDB = async (
     data: payload,
     include: {
       category: true,
-      vendor: true,
+      user: true,
       inventory: true,
     },
   });

@@ -6,6 +6,7 @@ import { InventoryRoutes } from '../modules/inventory/inventory.routes';
 import { OrderRoutes } from '../modules/order/order.routes';
 import { ProductRoutes } from '../modules/product/product.routes';
 import { ProfileRoutes } from '../modules/profile/profile.routes';
+import { PromotionRoutes } from '../modules/promotion/promotion.routes';
 import { UserRoutes } from '../modules/user/user.routes';
 
 const router = express.Router();
@@ -35,6 +36,10 @@ const moduleRoutes = [
   {
     path: '/inventories',
     route: InventoryRoutes,
+  },
+  {
+    path: '/promotions',
+    route: PromotionRoutes,
   },
   {
     path: '/cart',

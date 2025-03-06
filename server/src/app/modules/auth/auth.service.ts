@@ -2,19 +2,17 @@ import { comparePassword, getUserByEmail, hashPassword } from './auth.utils';
 
 import httpStatus from 'http-status';
 
-import { User } from '@prisma/client';
+import { User, UserProfile } from '@prisma/client';
 import { Secret } from 'jsonwebtoken';
 import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
-import {
-  ILoginUser,
-  ILoginUserResponse,
-  UserWithProfile,
-} from './auth.interface';
+import { ILoginUser, ILoginUserResponse } from './auth.interface';
 
-const registerUser = async (data: UserWithProfile): Promise<User> => {
+const registerUser = async (
+  data: User & { profile?: UserProfile }
+): Promise<User> => {
   // Check if the email or username already exists
   const isUserExist = await getUserByEmail(data.email);
 
@@ -35,12 +33,7 @@ const registerUser = async (data: UserWithProfile): Promise<User> => {
       role: role,
       profile: {
         create: {
-          bio: profile?.bio ?? '',
-          avatar: profile?.avatar ?? '',
-          phone: profile?.phone ?? '',
-          address: profile?.address ?? '',
-          dob: profile?.dob ?? new Date(),
-          gender: profile?.gender ?? '',
+          ...profile,
         },
       },
     },
