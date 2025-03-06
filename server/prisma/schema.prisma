@@ -21,8 +21,14 @@ model User {
   products           Product[]
   orders             Order[]
   cart               Cart?
-  payments           Payment[] // Fix relation name
+  payments           Payment[]
   emailNotifications EmailNotification[]
+  reviews            Review[]
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
 }
 
 model UserProfile {
@@ -33,47 +39,72 @@ model UserProfile {
   phone     String?
   address   String?
   dob       DateTime?
-  gender    String?
+  gender    Gender?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 // Product model
 model Product {
-  id          String        @id @default(uuid())
-  name        String
-  description String?
-  price       Decimal
-  sku         String        @unique
-  status      ProductStatus
-  categoryId  String
-  vendorId    String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  category    Category      @relation(fields: [categoryId], references: [id])
-  vendor      User          @relation(fields: [vendorId], references: [id])
-  inventory   Inventory?
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
+  id                 String         @id @default(uuid())
+  name               String
+  description        String?
+  price              Decimal
+  discountPercentage Decimal?
+  sku                String         @unique
+  status             ProductStatus  @default(ACTIVE)
+  categoryId         String
+  userId             String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  category           Category       @relation(fields: [categoryId], references: [id])
+  user               User           @relation(fields: [userId], references: [id])
+  inventory          Inventory?
+  orderItems         OrderItem[]
+  cartItems          CartItem[]
+  promotions         Promotion[]
+  reviews            Review[]
+  imageUrls          ProductImage[]
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // Category model
 model Category {
-  id       String    @id @default(uuid())
-  name     String
-  products Product[]
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 // Inventory model
 model Inventory {
-  id          String             @id @default(uuid())
-  productId   String             @unique
-  stock       Int
-  minStock    Int?
-  restockDate DateTime?
-  product     Product            @relation(fields: [productId], references: [id])
-  history     InventoryHistory[]
+  id        String             @id @default(uuid())
+  productId String             @unique
+  stock     Int
+  product   Product            @relation(fields: [productId], references: [id])
+  history   InventoryHistory[]
 }
 
 // Inventory History model
@@ -86,6 +117,38 @@ model InventoryHistory {
   newStock       Int
   createdAt      DateTime   @default(now())
   inventory      Inventory  @relation(fields: [inventoryId], references: [id])
+}
+
+enum ActionType {
+  IN
+  OUT
+}
+
+model Promotion {
+  id                 String        @id @default(uuid())
+  productId          String
+  type               PromotionType
+  discountPercentage Decimal
+  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt          DateTime      @default(now())
+}
+
+enum PromotionType {
+  FEATURED // Highlighted on homepage or special section
+  FLASH_SALE // Limited-time discount
+  BEST_DEAL // Special offers or bundle deals
+  TOP_SELLING // Based on highest sales
+  NEW_ARRIVAL // Recently added products
+}
+
+model Review {
+  id        String  @id @default(uuid())
+  productId String
+  userId    String
+  rating    Int
+  comment   String?
+  product   Product @relation(fields: [productId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 }
 
 // Order model
@@ -101,15 +164,23 @@ model Order {
   payments  Payment[]
 }
 
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
 // OrderItem model
 model OrderItem {
   id        String  @id @default(uuid())
   orderId   String
   productId String
   quantity  Int
-  price     Decimal
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  unitPrice Decimal // Stores the price at the time of order (prevents inconsistencies)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // Cart model
@@ -141,6 +212,19 @@ model EmailNotification {
   user    User        @relation(fields: [userId], references: [id])
 }
 
+enum EmailType {
+  ACCOUNT_CONFIRMATION
+  ORDER_CONFIRMATION
+  PAYMENT_SUCCESS
+  PASSWORD_RESET
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Payment {
   id            String        @id @default(uuid())
   orderId       String
@@ -170,43 +254,4 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
-}
-
-// Enums
-enum UserRole {
-  ADMIN
-  CUSTOMER
-  VENDOR
-}
-
-enum ProductStatus {
-  ACTIVE
-  INACTIVE
-  OUT_OF_STOCK
-}
-
-enum ActionType {
-  IN
-  OUT
-}
-
-enum EmailType {
-  ACCOUNT_CONFIRMATION
-  ORDER_CONFIRMATION
-  PAYMENT_SUCCESS
-  PASSWORD_RESET
-}
-
-enum EmailStatus {
-  PENDING
-  SENT
-  FAILED
-}
-
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
 }
