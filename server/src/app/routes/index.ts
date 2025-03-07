@@ -5,6 +5,7 @@ import { CategoryRoutes } from '../modules/category/category.routes';
 import { InventoryRoutes } from '../modules/inventory/inventory.routes';
 import { OrderRoutes } from '../modules/order/order.routes';
 import { ProductRoutes } from '../modules/product/product.routes';
+import { ProductImageRoutes } from '../modules/productImage/productImage.routes';
 import { ProfileRoutes } from '../modules/profile/profile.routes';
 import { PromotionRoutes } from '../modules/promotion/promotion.routes';
 import { UserRoutes } from '../modules/user/user.routes';
@@ -32,6 +33,10 @@ const moduleRoutes = [
   {
     path: '/products',
     route: ProductRoutes,
+  },
+  {
+    path: '/product_images',
+    route: ProductImageRoutes,
   },
   {
     path: '/inventories',
