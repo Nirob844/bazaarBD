@@ -1,0 +1,36 @@
+export interface Promotion {
+  type: string;
+  discountPercentage: string;
+}
+
+export interface ImageUrl {
+  url: string;
+  altText: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  discountPercentage: string | null;
+  category: {
+    name: string;
+  };
+  imageUrls: ImageUrl[];
+  promotions: Promotion[];
+  inventory: {
+    stock: number;
+  };
+}
+
+export interface Meta {
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ApiResponse {
+  meta: Meta;
+  data: Product[];
+}
