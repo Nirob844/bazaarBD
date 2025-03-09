@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { Gender, User } from '@prisma/client';
 
 export type ILoginUser = {
   email: string;
@@ -18,7 +18,7 @@ export type UserWithProfile = User & {
     avatar?: string;
     phone?: string;
     address?: string;
-    gender?: string;
+    gender?: Gender;
     dob?: Date;
   };
 };
