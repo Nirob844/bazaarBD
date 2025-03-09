@@ -1,7 +1,8 @@
 "use client";
 
 import { Category } from "@/types/category";
-import { Box, List, ListItem, ListItemText, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 interface ProductFiltersProps {
@@ -16,7 +17,6 @@ export default function ProductFilters({
   const router = useRouter();
 
   const handleCategoryChange = (categoryId: string) => {
-    // Update the URL with the selected category
     router.push(`/shop?categoryId=${categoryId}`);
   };
 
@@ -28,28 +28,60 @@ export default function ProductFilters({
         p: 3,
         borderRadius: 3,
         backgroundColor: "background.paper",
-        boxShadow: 2,
+        boxShadow: 3,
       }}
     >
-      <Typography variant="h6" fontWeight={700} gutterBottom>
+      <Typography
+        variant="h6"
+        fontWeight={700}
+        gutterBottom
+        sx={{ color: "text.primary", mb: 2 }}
+      >
         Product Categories
       </Typography>
-      <List disablePadding>
-        {allCategories.map((category) => (
-          <ListItem
-            button
-            key={category.id}
-            selected={category.id === selectedCategoryId}
-            onClick={() => handleCategoryChange(category.id)}
-            sx={{ borderRadius: 2, mb: 1 }}
-          >
-            <ListItemText
-              primary={category.name}
-              primaryTypographyProps={{ fontWeight: 600 }}
-            />
-          </ListItem>
-        ))}
-      </List>
+
+      <Stack spacing={1.5}>
+        {allCategories.map((category) => {
+          const isSelected = category.id === selectedCategoryId;
+
+          return (
+            <motion.div
+              key={category.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button
+                variant={isSelected ? "contained" : "outlined"}
+                color={isSelected ? "primary" : "inherit"}
+                onClick={() => handleCategoryChange(category.id)}
+                sx={{
+                  justifyContent: "flex-start",
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 2.5,
+                  py: 1.5,
+                  transition: "all 0.3s ease",
+                  boxShadow: isSelected ? 3 : 1,
+                  backgroundColor: isSelected
+                    ? "primary.main"
+                    : "background.paper",
+                  color: isSelected ? "primary.contrastText" : "text.primary",
+                  "&:hover": {
+                    backgroundColor: isSelected
+                      ? "primary.dark"
+                      : "action.hover",
+                    boxShadow: 3,
+                  },
+                }}
+                fullWidth
+              >
+                {category.name}
+              </Button>
+            </motion.div>
+          );
+        })}
+      </Stack>
     </Box>
   );
 }

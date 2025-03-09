@@ -175,6 +175,18 @@ const getDataById = async (id: string): Promise<Product | null> => {
           discountPercentage: true,
         },
       },
+      reviews: {
+        select: {
+          rating: true,
+          comment: true,
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
     },
   });
 };

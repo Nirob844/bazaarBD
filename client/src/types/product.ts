@@ -4,6 +4,7 @@ export interface Promotion {
 }
 
 export interface ImageUrl {
+  id: string;
   url: string;
   altText: string;
 }
