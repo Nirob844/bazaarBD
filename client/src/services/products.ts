@@ -6,22 +6,28 @@ export const fetchProducts = async ({
   sortBy = "price",
   sortOrder = "asc",
   categoryId = "",
+  searchTerm = "",
 }: {
   page?: number;
   limit?: number;
   sortBy?: string;
   sortOrder?: string;
   categoryId?: string;
+  searchTerm?: string;
 }): Promise<ApiResponse> => {
   const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/products`);
 
-  // Add query parameters
   url.searchParams.append("page", page.toString());
   url.searchParams.append("limit", limit.toString());
   url.searchParams.append("sortBy", sortBy);
   url.searchParams.append("sortOrder", sortOrder);
+
   if (categoryId) {
     url.searchParams.append("categoryId", categoryId);
+  }
+
+  if (searchTerm) {
+    url.searchParams.append("searchTerm", searchTerm);
   }
 
   const res = await fetch(url.toString());

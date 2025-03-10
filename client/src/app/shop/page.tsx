@@ -1,9 +1,9 @@
 import Hero from "@/components/shop/Hero";
 import ProductFilters from "@/components/shop/ProductFilters";
 import ProductGrid from "@/components/shop/ProductGrid";
+import ProductSearch from "@/components/shop/ProductSearch";
 import { fetchCategories } from "@/services/categories";
 import { fetchProducts } from "@/services/products";
-import { Search } from "@mui/icons-material";
 import {
   Box,
   Container,
@@ -21,13 +21,14 @@ const Shop = async (props: ShopPageProps) => {
   const searchParams = props.searchParams || {};
 
   const page = parseInt((searchParams.page as string) || "1");
-  const limit = parseInt((searchParams.limit as string) || "10");
+  const limit = parseInt((searchParams.limit as string) || "9");
   const sortBy = (searchParams.sortBy as string) || "price";
   const sortOrder = (searchParams.sortOrder as string) || "asc";
   const categoryId = (searchParams.categoryId as string) || "";
+  const searchTerm = (searchParams.searchTerm as string) || "";
 
   const [productsResponse, categories] = await Promise.all([
-    fetchProducts({ page, limit, sortBy, sortOrder, categoryId }),
+    fetchProducts({ page, limit, sortBy, sortOrder, categoryId, searchTerm }),
     fetchCategories(),
   ]);
 
@@ -40,14 +41,7 @@ const Shop = async (props: ShopPageProps) => {
 
       {/* Search and Sort Section */}
       <Box sx={{ display: "flex", gap: 3, mb: 4 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search products..."
-          InputProps={{
-            startAdornment: <Search color="action" />,
-          }}
-        />
+        <ProductSearch />
 
         <TextField
           select
