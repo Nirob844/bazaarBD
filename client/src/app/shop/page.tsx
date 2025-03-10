@@ -13,22 +13,18 @@ import {
   Typography,
 } from "@mui/material";
 
-const Shop = async ({
-  searchParams,
-}: {
-  searchParams: {
-    page?: string;
-    limit?: string;
-    sortBy?: string;
-    sortOrder?: string;
-    categoryId?: string;
-  };
-}) => {
-  const page = parseInt(searchParams.page || "1");
-  const limit = parseInt(searchParams.limit || "10");
-  const sortBy = searchParams.sortBy || "price";
-  const sortOrder = searchParams.sortOrder || "asc";
-  const categoryId = searchParams.categoryId || "";
+interface ShopPageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+const Shop = async (props: ShopPageProps) => {
+  const searchParams = props.searchParams || {};
+
+  const page = parseInt((searchParams.page as string) || "1");
+  const limit = parseInt((searchParams.limit as string) || "10");
+  const sortBy = (searchParams.sortBy as string) || "price";
+  const sortOrder = (searchParams.sortOrder as string) || "asc";
+  const categoryId = (searchParams.categoryId as string) || "";
 
   const [productsResponse, categories] = await Promise.all([
     fetchProducts({ page, limit, sortBy, sortOrder, categoryId }),
@@ -38,7 +34,7 @@ const Shop = async ({
   const { data: products, meta } = productsResponse;
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Hero Section */}
       <Hero />
 
