@@ -11,17 +11,17 @@ const insertIntoDB = async (req: Request): Promise<ProductImage> => {
     const uploadImage = await FileUploadHelper.uploadToCloudinary(file);
     req.body.url = uploadImage?.secure_url;
   }
-  console.log('req--body--productId', req.body);
+
   const product = await prisma.product.findUnique({
     where: {
       id: req.body.productId,
     },
   });
-  console.log('product', product);
+
   if (!product) {
     throw new Error('Product not found!');
   }
-  console.log('request body:------', req.body);
+
   const result = await prisma.productImage.create({
     data: req.body,
   });
