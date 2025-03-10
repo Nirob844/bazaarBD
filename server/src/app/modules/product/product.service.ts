@@ -29,7 +29,6 @@ import {
 const insertIntoDB = async (
   data: Product & { inventory?: Inventory }
 ): Promise<Product> => {
-  console.log('data', data);
   const { inventory, ...productData } = data;
   // Check if SKU is unique
   const existingSku = await prisma.product.findUnique({
