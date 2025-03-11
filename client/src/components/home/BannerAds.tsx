@@ -9,7 +9,6 @@ import {
   alpha,
   useTheme,
 } from "@mui/material";
-import Image from "next/image";
 import Link from "next/link";
 
 const bannerAds = [
@@ -59,12 +58,6 @@ export default function BannerAds() {
                   color: theme.palette.common.white,
                 }}
               >
-                <Image
-                  src={banner.image}
-                  alt={banner.title}
-                  fill
-                  style={{ objectFit: "cover" }}
-                />
                 <Box
                   sx={{
                     position: "relative",

@@ -15,6 +15,7 @@ export interface Product {
   description: string;
   price: string;
   discountPercentage: string | null;
+  status: string;
   category: {
     name: string;
   };

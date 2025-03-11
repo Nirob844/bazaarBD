@@ -8,7 +8,7 @@ import { ThemeProvider } from "@mui/material/styles";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Normalize CSS */}
+      <CssBaseline />
       {children}
     </ThemeProvider>
   );

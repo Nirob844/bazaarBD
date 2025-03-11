@@ -8,7 +8,7 @@ import sendResponse from '../../../shared/sendResponse';
 import { CategoryService } from './category.service';
 
 const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
-  const result = await CategoryService.insertIntoDB(req.body);
+  const result = await CategoryService.insertIntoDB(req);
   sendResponse<Category>(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -40,8 +40,7 @@ const getDataById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await CategoryService.updateOneInDB(id, req.body);
+  const result = await CategoryService.updateOneInDB(req);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

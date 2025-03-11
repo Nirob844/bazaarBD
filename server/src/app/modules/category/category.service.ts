@@ -1,12 +1,22 @@
 import { Category, Prisma } from '@prisma/client';
+import { Request } from 'express';
+import { FileUploadHelper } from '../../../helpers/fileUploadHelper';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
+import { IUploadFile } from '../../../interfaces/file';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
-const insertIntoDB = async (data: Category): Promise<Category> => {
+const insertIntoDB = async (req: Request): Promise<Category> => {
+  const file = req.file as IUploadFile;
+
+  if (file) {
+    const uploadImage = await FileUploadHelper.uploadToCloudinary(file);
+    req.body.imageUrl = uploadImage?.secure_url;
+  }
+
   const result = await prisma.category.create({
-    data,
+    data: req.body,
   });
 
   return result;
@@ -60,16 +70,21 @@ const getDataById = async (id: string): Promise<Category | null> => {
   return result;
 };
 
-const updateOneInDB = async (
-  id: string,
-  payload: Partial<Category>
-): Promise<Category> => {
+const updateOneInDB = async (req: Request): Promise<Category> => {
+  const { id } = req.params;
+  const file = req.file as IUploadFile;
+
+  // Handle file upload if a new image is provided
+  if (file) {
+    const uploadImage = await FileUploadHelper.uploadToCloudinary(file);
+    req.body.imageUrl = uploadImage?.secure_url;
+  }
+
   const result = await prisma.category.update({
-    where: {
-      id,
-    },
-    data: payload,
+    where: { id },
+    data: req.body,
   });
+
   return result;
 };
 

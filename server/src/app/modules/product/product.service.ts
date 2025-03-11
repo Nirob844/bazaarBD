@@ -64,10 +64,11 @@ const getAllFromDB = async (
   options: IPaginationOptions
 ): Promise<IGenericResponse<Product[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, ...filterData } = filters;
+  const { searchTerm, minPrice, maxPrice, status, ...filterData } = filters;
 
   const andConditions = [];
 
+  // Search term conditions
   if (searchTerm) {
     andConditions.push({
       OR: productSearchAbleFields.map(field => ({
@@ -79,16 +80,63 @@ const getAllFromDB = async (
     });
   }
 
+  // Min price filtering
+  if (minPrice !== undefined) {
+    andConditions.push({
+      price: {
+        gte: Number(minPrice),
+      },
+    });
+  }
+
+  // Max price filtering
+  if (maxPrice !== undefined) {
+    andConditions.push({
+      price: {
+        lte: Number(maxPrice),
+      },
+    });
+  }
+
+  if (status) {
+    andConditions.push({
+      status: {
+        equals: status,
+      },
+    });
+  }
+
+  // Filter conditions
   if (Object.keys(filterData).length > 0) {
     andConditions.push({
       AND: Object.keys(filterData).map(key => {
         if (productRelationalFields.includes(key)) {
+          const relationField = productRelationalFieldsMapper[key];
+
+          // Handle one-to-many relations for promotions
+          if (relationField === 'promotions') {
+            return {
+              [relationField]: {
+                some: {
+                  ...(key === 'promotionId' && {
+                    id: (filterData as any)[key],
+                  }),
+                  ...(key === 'promotionType' && {
+                    type: (filterData as any)[key],
+                  }),
+                },
+              },
+            };
+          }
+
+          // Handle one-to-one relations for category, inventory
           return {
-            [productRelationalFieldsMapper[key]]: {
+            [relationField]: {
               id: (filterData as any)[key],
             },
           };
         } else {
+          // Non-relational filters (price, status, etc.)
           return {
             [key]: {
               equals: (filterData as any)[key],
@@ -137,6 +185,7 @@ const getAllFromDB = async (
       },
     },
   });
+
   const total = await prisma.product.count({
     where: whereConditions,
   });
