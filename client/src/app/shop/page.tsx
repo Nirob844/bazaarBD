@@ -24,18 +24,42 @@ const Shop = async (props: ShopPageProps) => {
   const limit = parseInt((searchParams.limit as string) || "9");
   const sortBy = (searchParams.sortBy as string) || "price";
   const sortOrder = (searchParams.sortOrder as string) || "asc";
-  const categoryId = (searchParams.categoryId as string) || "";
+
   const searchTerm = (searchParams.searchTerm as string) || "";
+  const categoryId = (searchParams.categoryId as string) || "";
+  const status = (searchParams.status as string) || "";
+  const minPrice = searchParams.minPrice
+    ? Number(searchParams.minPrice)
+    : undefined;
+  const maxPrice = searchParams.maxPrice
+    ? Number(searchParams.maxPrice)
+    : undefined;
+  const promotionId = (searchParams.promotionId as string) || "";
+  const promotionType = (searchParams.promotionType as string) || "";
+  const inventoryId = (searchParams.inventoryId as string) || "";
 
   const [productsResponse, categories] = await Promise.all([
-    fetchProducts({ page, limit, sortBy, sortOrder, categoryId, searchTerm }),
+    fetchProducts({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      searchTerm,
+      categoryId,
+      status,
+      minPrice,
+      maxPrice,
+      promotionId,
+      promotionType,
+      inventoryId,
+    }),
     fetchCategories(),
   ]);
 
   const { data: products, meta } = productsResponse;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Hero Section */}
       <Hero />
 

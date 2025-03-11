@@ -64,7 +64,7 @@ const getAllFromDB = async (
   options: IPaginationOptions
 ): Promise<IGenericResponse<Product[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, ...filterData } = filters;
+  const { searchTerm, minPrice, maxPrice, status, ...filterData } = filters;
 
   const andConditions = [];
 
@@ -77,6 +77,32 @@ const getAllFromDB = async (
           mode: 'insensitive',
         },
       })),
+    });
+  }
+
+  // Min price filtering
+  if (minPrice !== undefined) {
+    andConditions.push({
+      price: {
+        gte: Number(minPrice),
+      },
+    });
+  }
+
+  // Max price filtering
+  if (maxPrice !== undefined) {
+    andConditions.push({
+      price: {
+        lte: Number(maxPrice),
+      },
+    });
+  }
+
+  if (status) {
+    andConditions.push({
+      status: {
+        equals: status,
+      },
     });
   }
 

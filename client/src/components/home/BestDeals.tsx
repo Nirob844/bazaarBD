@@ -48,7 +48,7 @@ export default function BestDeals() {
             textAlign: "center",
           }}
         >
-          Featured Products
+          Limited-Time Deals
         </Typography>
 
         {loading ? (

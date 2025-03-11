@@ -4,6 +4,8 @@ export const productFilterAbleFields: string[] = [
   'searchTerm',
   'status',
   'price',
+  'minPrice',
+  'maxPrice',
   'categoryId',
   'inventoryId',
   'promotionId',
