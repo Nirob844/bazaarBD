@@ -1,10 +1,10 @@
-import BannerAds from "@/components/homepage/BannerAds";
-import BestDeals from "@/components/homepage/BestDeals";
-import Categories from "@/components/homepage/Categories";
-import FeaturedProducts from "@/components/homepage/FeaturedProducts";
-import Hero from "@/components/homepage/Hero";
-import Testimonials from "@/components/homepage/Testimonials";
-import WhyChooseUs from "@/components/homepage/WhyChooseUs";
+import BannerAds from "@/components/home/BannerAds";
+import BestDeals from "@/components/home/BestDeals";
+import Categories from "@/components/home/Categories";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
+import Hero from "@/components/home/Hero";
+import Testimonials from "@/components/home/Testimonials";
+import WhyChooseUs from "@/components/home/WhyChooseUs";
 
 const Home = () => {
   return (

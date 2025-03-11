@@ -79,12 +79,46 @@ const getAllFromDB = async (
     });
   }
 
+  // if (Object.keys(filterData).length > 0) {
+  //   andConditions.push({
+  //     AND: Object.keys(filterData).map(key => {
+  //       if (productRelationalFields.includes(key)) {
+  //         return {
+  //           [productRelationalFieldsMapper[key]]: {
+  //             id: (filterData as any)[key],
+  //           },
+  //         };
+  //       } else {
+  //         return {
+  //           [key]: {
+  //             equals: (filterData as any)[key],
+  //           },
+  //         };
+  //       }
+  //     }),
+  //   });
+  // }
+
   if (Object.keys(filterData).length > 0) {
     andConditions.push({
       AND: Object.keys(filterData).map(key => {
         if (productRelationalFields.includes(key)) {
+          const relationField = productRelationalFieldsMapper[key];
+
+          // Handle one-to-many relations
+          if (relationField === 'promotions') {
+            return {
+              [relationField]: {
+                some: {
+                  id: (filterData as any)[key],
+                },
+              },
+            };
+          }
+
+          // Handle one-to-one relations
           return {
-            [productRelationalFieldsMapper[key]]: {
+            [relationField]: {
               id: (filterData as any)[key],
             },
           };

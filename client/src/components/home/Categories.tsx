@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchCategories } from "@/services/categories";
+import { Category } from "@/types/category";
 import {
   Box,
   Button,
@@ -13,54 +15,36 @@ import {
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
-
-const categories = [
-  {
-    id: 1,
-    title: "Electronics",
-    image: "/images/categories/electronics.jpg",
-    description: "Explore the latest gadgets and devices.",
-    link: "/categories/electronics",
-  },
-  {
-    id: 2,
-    title: "Fashion",
-    image: "/images/categories/fashion.jpg",
-    description: "Stay trendy with our fashion collection.",
-    link: "/categories/fashion",
-  },
-  {
-    id: 3,
-    title: "Home & Living",
-    image: "/images/categories/home-living.jpg",
-    description: "Make your home cozy and stylish.",
-    link: "/categories/home-living",
-  },
-  {
-    id: 4,
-    title: "Beauty & Health",
-    image: "/images/categories/beauty-health.jpg",
-    description: "Look and feel your best.",
-    link: "/categories/beauty-health",
-  },
-  {
-    id: 5,
-    title: "Sports & Fitness",
-    image: "/images/categories/sports-fitness.jpg",
-    description: "Gear up for an active lifestyle.",
-    link: "/categories/sports-fitness",
-  },
-  {
-    id: 6,
-    title: "Books & Stationery",
-    image: "/images/categories/books-stationery.jpg",
-    description: "Fuel your mind and creativity.",
-    link: "/categories/books-stationery",
-  },
-];
+import { useEffect, useState } from "react";
 
 export default function Categories() {
   const theme = useTheme();
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getCategories = async () => {
+      try {
+        const data = await fetchCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getCategories();
+  }, []);
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8, textAlign: "center" }}>
+        <Typography variant="h6">Loading categories...</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Box
@@ -106,8 +90,8 @@ export default function Categories() {
                   }}
                 >
                   <Image
-                    src={category.image}
-                    alt={category.title}
+                    src={category.imageUrl || "/default-image.jpg"}
+                    alt={category.name}
                     fill
                     style={{ objectFit: "cover" }}
                   />
@@ -130,9 +114,9 @@ export default function Categories() {
                         mb: 1,
                       }}
                     >
-                      {category.title}
+                      {category.name}
                     </Typography>
-                    <Typography
+                    {/* <Typography
                       variant="body2"
                       sx={{
                         color: theme.palette.text.secondary,
@@ -140,11 +124,11 @@ export default function Categories() {
                       }}
                     >
                       {category.description}
-                    </Typography>
+                    </Typography> */}
                   </Box>
                   <Button
                     component={Link}
-                    href={category.link}
+                    href={`/shop?categoryId=${category.id}`}
                     variant="outlined"
                     sx={{
                       textTransform: "none",
