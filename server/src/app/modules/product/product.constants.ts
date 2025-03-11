@@ -7,14 +7,17 @@ export const productFilterAbleFields: string[] = [
   'categoryId',
   'inventoryId',
   'promotionId',
+  'promotionType',
 ];
 export const productRelationalFields: string[] = [
   'categoryId',
   'inventoryId',
   'promotionId',
+  'promotionType',
 ];
 export const productRelationalFieldsMapper: { [key: string]: string } = {
   categoryId: 'category',
   inventoryId: 'inventory',
   promotionId: 'promotions',
+  promotionType: 'promotions',
 };
