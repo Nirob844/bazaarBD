@@ -1,7 +1,8 @@
 "use client";
 
+import { authKey } from "@/constants/storage";
+import { isLoggedIn, removeUserInfo } from "@/utils/auth";
 import {
-  AccountCircle,
   Close,
   Home,
   LocalOffer,
@@ -31,6 +32,7 @@ import {
   useTheme,
 } from "@mui/material";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const SearchField = styled(InputBase)(({ theme }) => ({
@@ -49,28 +51,37 @@ const SearchField = styled(InputBase)(({ theme }) => ({
   },
 }));
 
-export default function Navbar() {
+const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mounted, setMounted] = useState(false);
+
   const openProfile = Boolean(anchorEl);
   const theme = useTheme();
+  const router = useRouter();
+  const loggedIn = isLoggedIn();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const toggleDrawer = (open: boolean) => () => setMobileOpen(open);
+
   const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) =>
     setAnchorEl(event.currentTarget);
+
   const handleClose = () => setAnchorEl(null);
+
+  const handleLogout = () => {
+    removeUserInfo(authKey);
+    handleClose();
+    router.push("/login");
+  };
 
   const menuItems = [
     { text: "Home", icon: <Home />, path: "/" },
     { text: "Shop", icon: <Store />, path: "/shop" },
     { text: "Deals", icon: <LocalOffer />, path: "/deals" },
-    { text: "Cart", icon: <ShoppingCart />, path: "/cart" },
-    { text: "Profile", icon: <AccountCircle />, path: "#" },
   ];
 
   const drawer = (
@@ -88,6 +99,7 @@ export default function Navbar() {
           <Close />
         </IconButton>
       </Box>
+
       <List>
         {menuItems.map((item) => (
           <ListItem
@@ -109,6 +121,81 @@ export default function Navbar() {
             />
           </ListItem>
         ))}
+
+        {loggedIn ? (
+          <>
+            <ListItem
+              component={Link}
+              href="/profile"
+              onClick={toggleDrawer(false)}
+              sx={{
+                "&:hover": { backgroundColor: theme.palette.action.hover },
+                borderRadius: 2,
+                my: 1,
+                mx: 2,
+              }}
+            >
+              <ListItemText
+                primary="Profile"
+                primaryTypographyProps={{ fontWeight: 500 }}
+              />
+            </ListItem>
+
+            <ListItem
+              onClick={() => {
+                handleLogout();
+                toggleDrawer(false)();
+              }}
+              sx={{
+                "&:hover": { backgroundColor: theme.palette.action.hover },
+                borderRadius: 2,
+                my: 1,
+                mx: 2,
+              }}
+            >
+              <ListItemText
+                primary="Logout"
+                primaryTypographyProps={{ fontWeight: 500 }}
+              />
+            </ListItem>
+          </>
+        ) : (
+          <>
+            <ListItem
+              component={Link}
+              href="/login"
+              onClick={toggleDrawer(false)}
+              sx={{
+                "&:hover": { backgroundColor: theme.palette.action.hover },
+                borderRadius: 2,
+                my: 1,
+                mx: 2,
+              }}
+            >
+              <ListItemText
+                primary="Login"
+                primaryTypographyProps={{ fontWeight: 500 }}
+              />
+            </ListItem>
+
+            <ListItem
+              component={Link}
+              href="/register"
+              onClick={toggleDrawer(false)}
+              sx={{
+                "&:hover": { backgroundColor: theme.palette.action.hover },
+                borderRadius: 2,
+                my: 1,
+                mx: 2,
+              }}
+            >
+              <ListItemText
+                primary="Register"
+                primaryTypographyProps={{ fontWeight: 500 }}
+              />
+            </ListItem>
+          </>
+        )}
       </List>
     </Box>
   );
@@ -119,7 +206,6 @@ export default function Navbar() {
     <AppBar
       position="sticky"
       sx={{
-        // background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
         background: theme.palette.primary.main,
         boxShadow: theme.shadows[4],
         borderBottom: `1px solid ${theme.palette.divider}`,
@@ -161,7 +247,7 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1, mx: 4 }}>
-          {menuItems.slice(0, 3).map((item) => (
+          {menuItems.map((item) => (
             <Button
               key={item.text}
               component={Link}
@@ -202,39 +288,71 @@ export default function Navbar() {
           />
         </Box>
 
-        {/* Action Icons */}
+        {/* Action Buttons */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <IconButton
-            component={Link}
-            href="/cart"
-            sx={{
-              color: theme.palette.common.white,
-              "&:hover": {
-                backgroundColor: alpha(theme.palette.common.white, 0.1),
-              },
-              borderRadius: 2,
-            }}
-          >
-            <Badge badgeContent={2} color="error">
-              <ShoppingCart />
-            </Badge>
-          </IconButton>
+          {loggedIn ? (
+            <>
+              {/* Cart Button */}
+              <IconButton
+                component={Link}
+                href="/cart"
+                sx={{
+                  color: theme.palette.common.white,
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.common.white, 0.1),
+                  },
+                  borderRadius: 2,
+                }}
+              >
+                <Badge badgeContent={2} color="error">
+                  <ShoppingCart />
+                </Badge>
+              </IconButton>
 
-          <IconButton
-            onClick={handleProfileMenu}
-            sx={{
-              color: theme.palette.common.white,
-              "&:hover": {
-                backgroundColor: alpha(theme.palette.common.white, 0.1),
-              },
-              borderRadius: 2,
-            }}
-          >
-            <AccountCircle />
-          </IconButton>
+              {/* Profile Menu */}
+              <Button
+                onClick={handleProfileMenu}
+                sx={{
+                  color: theme.palette.common.white,
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.common.white, 0.1),
+                  },
+                  borderRadius: 3,
+                  textTransform: "none",
+                  fontWeight: 500,
+                }}
+              >
+                My Account
+              </Button>
+            </>
+          ) : (
+            <>
+              {/* Login Button */}
+              <Button
+                component={Link}
+                href="/login"
+                sx={{
+                  color: theme.palette.common.white,
+                  backgroundColor: theme.palette.secondary.main,
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.secondary.main, 0.8),
+                  },
+                  borderRadius: 3,
+                  textTransform: "none",
+                  fontWeight: 500,
+                  padding: "8px 16px",
+                  boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+                  transition:
+                    "background-color 0.3s ease, box-shadow 0.3s ease",
+                }}
+              >
+                Login
+              </Button>
+            </>
+          )}
         </Box>
 
-        {/* Profile Menu Dropdown */}
+        {/* Profile Dropdown Menu */}
         <MuiMenu
           anchorEl={anchorEl}
           open={openProfile}
@@ -254,10 +372,7 @@ export default function Navbar() {
           <MenuItem onClick={handleClose} component={Link} href="/orders">
             My Orders
           </MenuItem>
-          <MenuItem onClick={handleClose} component={Link} href="/wishlist">
-            Wishlist
-          </MenuItem>
-          <MenuItem onClick={handleClose}>Sign Out</MenuItem>
+          <MenuItem onClick={handleLogout}>Sign Out</MenuItem>
         </MuiMenu>
       </Toolbar>
 
@@ -273,4 +388,6 @@ export default function Navbar() {
       </Drawer>
     </AppBar>
   );
-}
+};
+
+export default Navbar;
