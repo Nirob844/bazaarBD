@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { authKey } from "@/constants/storage";
 import { Product } from "@/types/product";
+import { getUserInfo } from "@/utils/auth";
+import { getFromLocalStorage } from "@/utils/local-storage";
 import { ShoppingCart } from "@mui/icons-material";
 import {
   Box,
@@ -15,8 +19,53 @@ import {
 } from "@mui/material";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const router = useRouter();
+  const { userId } = getUserInfo() as { userId: string };
+
+  const handleAddToCart = async () => {
+    // If user is not logged in, redirect to login page
+    if (!userId) {
+      toast.error("Please log in to add items to your cart.");
+      router.push("/login");
+      return;
+    }
+    const accessToken = getFromLocalStorage(authKey);
+    try {
+      // Show loading toast
+      await toast.promise(
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/cart`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: accessToken } : {}),
+          },
+          body: JSON.stringify({
+            userId,
+            productId: product.id,
+            quantity: 1,
+          }),
+        }).then(async (res) => {
+          const data = await res.json();
+          console.log("Add to Cart Response:", data);
+          if (!res.ok) {
+            throw new Error(data.message || "Failed to add to cart.");
+          }
+        }),
+        {
+          loading: "Adding to cart...",
+          success: "Added to cart!",
+          error: (err) => err.message || "Something went wrong.",
+        }
+      );
+    } catch (error: any) {
+      console.error("Add to Cart Error:", error);
+    }
+  };
+
   const mainImage = product.imageUrls[0]?.url || "/placeholder-product.jpg";
 
   const discountPromotion = product.promotions.find(
@@ -210,6 +259,7 @@ export default function ProductCard({ product }: { product: Product }) {
               },
             }}
             disabled={product.inventory.stock === 0}
+            onClick={handleAddToCart} // Add this line
           >
             {product.inventory.stock === 0 ? "Out of Stock" : "Add to Cart"}
           </Button>

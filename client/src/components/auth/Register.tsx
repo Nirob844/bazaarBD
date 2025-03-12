@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -18,6 +16,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,45 +27,48 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`,
+      await toast.promise(
+        (async () => {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ name, email, password }),
+            }
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(
+              data.message || "Registration failed. Please try again."
+            );
+          }
+
+          // Optional: store token if your backend returns one immediately after registration
+          // const accessToken = data.data;
+          // storeUserInfo(accessToken);
+
+          // Redirect to login page after successful registration
+          router.push("/login");
+        })(),
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-          }),
+          loading: "Registering...",
+          success: "Registration successful! Redirecting...",
+          error: (err) => err.message || "Something went wrong.",
         }
       );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Registration failed");
-        return;
-      }
-
-      setSuccess("Registration successful! Redirecting...");
-
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
-    } catch (err: any) {
-      setError("Something went wrong. Please try again.");
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -176,9 +178,6 @@ export default function RegisterPage() {
                     required
                     fullWidth
                   />
-
-                  {error && <Alert severity="error">{error}</Alert>}
-                  {success && <Alert severity="success">{success}</Alert>}
 
                   <Button
                     type="submit"

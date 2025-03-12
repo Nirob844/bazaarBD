@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { storeUserInfo } from "@/utils/auth";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -19,6 +16,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,47 +24,44 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/login`,
+      await toast.promise(
+        (async () => {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password }),
+            }
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.message || "Login failed. Please try again.");
+          }
+
+          const accessToken = data.data;
+          storeUserInfo(accessToken);
+          router.push("/shop");
+        })(),
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
+          loading: "Logging in...",
+          success: "Login successful!",
+          error: (err) => err.message || "Something went wrong.",
         }
       );
-
-      const data = await res.json();
-      const accessToken = data.data;
-      storeUserInfo(accessToken);
-      if (!res.ok) {
-        setError(data.message || "Login failed. Please try again.");
-        return;
-      }
-
-      setSuccess("Login successful! Redirecting...");
-
-      setTimeout(() => {
-        router.push("/shop");
-      }, 2000);
-    } catch (err: any) {
-      setError("Something went wrong. Please try again.");
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -167,9 +162,6 @@ export default function LoginPage() {
                     required
                     fullWidth
                   />
-
-                  {error && <Alert severity="error">{error}</Alert>}
-                  {success && <Alert severity="success">{success}</Alert>}
 
                   <Button
                     type="submit"
