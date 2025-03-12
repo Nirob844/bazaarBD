@@ -10,7 +10,11 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              imageUrls: true,
+            },
+          },
         },
       },
     },
@@ -24,7 +28,11 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
       include: {
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                imageUrls: true,
+              },
+            },
           },
         },
       },

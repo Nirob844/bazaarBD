@@ -41,7 +41,8 @@ const addItemToCart = catchAsync(async (req: Request, res: Response) => {
 
 // Update cart item quantity
 const updateCartItem = catchAsync(async (req: Request, res: Response) => {
-  const { cartItemId, quantity } = req.body;
+  const { quantity } = req.body;
+  const { cartItemId } = req.params;
   const result = await CartService.updateCartItem(cartItemId, quantity);
   sendResponse<CartItem>(res, {
     statusCode: httpStatus.OK,
