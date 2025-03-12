@@ -1,32 +1,59 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useAddCartMutation } from "@/redux/api/cartApi";
 import { Promotion } from "@/types/product";
-import { ShoppingCart } from "@mui/icons-material";
-import { Box, Button, Chip, Divider, Rating, Typography } from "@mui/material";
+import { getUserInfo } from "@/utils/auth";
+import { Add, Remove, ShoppingCart } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  Rating,
+  Typography,
+} from "@mui/material";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 interface ProductInfoProps {
   name: string;
   description: string;
   price: string;
+  sku: string;
+  status: string;
   promotions: Promotion[];
   category: { name: string };
   inventory: { stock: number };
   user: { name: string; email: string };
   averageRating: number;
   reviewsCount: number;
+  productId: string;
 }
 
 export default function ProductInfo({
   name,
   description,
   price,
+  sku,
+  status,
   promotions,
   category,
   inventory,
   user,
   averageRating,
   reviewsCount,
+  productId,
 }: ProductInfoProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
+
+  const [addCart] = useAddCartMutation();
+  const { userId } = getUserInfo() as { userId: string };
+
   const discountPromo = promotions.find((p) => p.discountPercentage);
   const discountPercentage = discountPromo?.discountPercentage || null;
   const discountedPrice = discountPercentage
@@ -35,28 +62,78 @@ export default function ProductInfo({
       )
     : null;
 
+  const handleAddToCart = async () => {
+    if (!userId) {
+      toast.error("Please log in to add items to your cart.");
+      router.push("/login");
+      return;
+    }
+
+    if (inventory.stock === 0) {
+      toast.error("Sorry, this product is out of stock!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await addCart({
+        userId,
+        productId,
+        quantity,
+      });
+
+      if (res?.data) {
+        toast.success("Added to cart!");
+      } else if (res?.error) {
+        toast.error("Failed to add to cart.");
+      }
+    } catch (error: any) {
+      toast.error("Something went wrong. Please try again.");
+      console.error("Add to cart error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const increaseQuantity = () => {
+    if (quantity < inventory.stock) {
+      setQuantity(quantity + 1);
+    } else {
+      toast.error(`Maximum stock limit reached (${inventory.stock})`);
+    }
+  };
+
+  const decreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" fontWeight={800} gutterBottom>
+    <Box
+      sx={{
+        p: { xs: 2, md: 4 },
+        mx: "auto",
+      }}
+    >
+      {/* Product Name */}
+      <Typography variant="h4" fontWeight={700} mb={2} color="text.primary">
         {name}
       </Typography>
 
+      {/* Ratings */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
         <Rating value={averageRating} precision={0.5} readOnly />
-        <Typography variant="body2" sx={{ ml: 1 }}>
-          ({reviewsCount} review{reviewsCount !== 1 ? "s" : ""})
+        <Typography variant="body2" sx={{ ml: 1 }} color="text.secondary">
+          {reviewsCount} review{reviewsCount !== 1 ? "s" : ""}
         </Typography>
       </Box>
 
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+      {/* Pricing */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
         {discountedPrice ? (
           <>
-            <Typography
-              variant="h5"
-              color="primary"
-              fontWeight={800}
-              sx={{ mr: 1 }}
-            >
+            <Typography variant="h5" color="primary" fontWeight={800} mr={1}>
               ${discountedPrice}
             </Typography>
             <Typography
@@ -80,28 +157,33 @@ export default function ProductInfo({
         )}
       </Box>
 
-      <Typography variant="body1" sx={{ mb: 3 }}>
+      {/* SKU & Status */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <Chip label={`SKU: ${sku}`} variant="outlined" />
+        <Chip
+          label={status}
+          color={status.toLowerCase() === "active" ? "success" : "warning"}
+        />
+      </Box>
+
+      {/* Description */}
+      <Typography variant="body1" color="text.secondary" mb={3}>
         {description}
       </Typography>
-      <Typography variant="body1" sx={{ mb: 3 }}>
-        Lorem ipsum, dolor sit amet consectetur adipisicing elit. Eaque eos
-        inventore quae corporis error placeat dolores aspernatur nisi
-        consectetur vero unde eveniet dolore blanditiis necessitatibus dolorem
-        adipisci architecto, ullam sit facilis reprehenderit voluptatum vitae,
-        ducimus voluptates! Blanditiis eum, tempore dolores vel voluptates
-        libero omnis minus hic adipisci similique ex praesentium quae.
-        Repellendus error rerum culpa, quo saepe nisi omnis numquam animi nihil
-        nam, similique et possimus deleniti? Omnis iure animi pariatur incidunt
-        officiis consequatur voluptas deserunt, earum porro asperiores aliquam
-        error minima architecto temporibus, expedita ex cupiditate provident,
-        similique at perferendis corporis. Provident, totam illum? Ipsum, a! Ex,
-        eligendi vel.
-      </Typography>
-      <Box sx={{ mb: 2 }}>
-        <Chip label={category.name} variant="outlined" />
+
+      {/* Category & Stock Info */}
+      <Box sx={{ mb: 3 }}>
+        <Chip
+          label={category.name}
+          color="primary"
+          variant="outlined"
+          sx={{ mr: 1 }}
+        />
         <Typography
           variant="body2"
-          color={inventory.stock > 0 ? "success.main" : "error"}
+          color={inventory.stock > 0 ? "success.main" : "error.main"}
+          fontWeight={500}
+          mt={1}
         >
           {inventory.stock > 0
             ? `In Stock (${inventory.stock})`
@@ -109,6 +191,55 @@ export default function ProductInfo({
         </Typography>
       </Box>
 
+      {/* Quantity Control */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mb: 3,
+          gap: 2,
+        }}
+      >
+        <Typography variant="body1" fontWeight={600}>
+          Quantity:
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            borderRadius: 1,
+            border: "1px solid #ccc",
+            px: 1,
+            py: 0.5,
+            backgroundColor: "#f9f9f9",
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={decreaseQuantity}
+            disabled={quantity <= 1}
+          >
+            <Remove />
+          </IconButton>
+          <Typography
+            variant="body1"
+            fontWeight={600}
+            sx={{ mx: 2, minWidth: 32, textAlign: "center" }}
+          >
+            {quantity}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={increaseQuantity}
+            disabled={quantity >= inventory.stock}
+          >
+            <Add />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Add to Cart Button */}
       <Button
         variant="contained"
         size="large"
@@ -120,14 +251,30 @@ export default function ProductInfo({
           textTransform: "none",
           fontWeight: 700,
         }}
+        onClick={handleAddToCart}
+        disabled={loading || inventory.stock === 0}
       >
-        Add to Cart
+        {inventory.stock === 0
+          ? "Out of Stock"
+          : loading
+          ? "Adding..."
+          : `Add ${quantity} to Cart`}
       </Button>
 
       <Divider sx={{ my: 4 }} />
 
+      {/* Seller Info */}
       <Typography variant="body2" color="text.secondary">
-        Sold by: <strong>{user.name}</strong> ({user.email})
+        Sold by:{" "}
+        <Typography
+          component="span"
+          variant="body2"
+          fontWeight={600}
+          color="text.primary"
+        >
+          {user.name}
+        </Typography>{" "}
+        ({user.email})
       </Typography>
     </Box>
   );

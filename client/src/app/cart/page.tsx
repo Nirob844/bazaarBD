@@ -2,53 +2,16 @@
 
 import CartTable from "@/components/cart/CartTable";
 import OrderSummary from "@/components/cart/OrderSummary";
-import { authKey } from "@/constants/storage";
+import { useGetCartQuery } from "@/redux/api/cartApi";
 import { getUserInfo } from "@/utils/auth";
-import { getFromLocalStorage } from "@/utils/local-storage";
 import { CircularProgress, Container, Grid, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
 
 export default function CartPage() {
-  const [cartData, setCartData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   const { userId } = getUserInfo() as { userId: string };
-  const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/cart/${userId}`;
 
-  useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        const accessToken = getFromLocalStorage(authKey);
-        if (!accessToken) {
-          console.error("Access token not found!");
-          return;
-        }
+  const { data: cart, isLoading } = useGetCartQuery(userId);
 
-        const res = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: accessToken,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch cart");
-        }
-
-        const data = await res.json();
-        setCartData(data.data);
-      } catch (error) {
-        console.error("Failed to fetch cart:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCart();
-  }, [apiUrl]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
         <CircularProgress />
@@ -56,7 +19,7 @@ export default function CartPage() {
     );
   }
 
-  const { items } = cartData || { items: [] };
+  const { items } = cart.data || { items: [] };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

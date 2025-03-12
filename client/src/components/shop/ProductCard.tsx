@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { authKey } from "@/constants/storage";
+import { useAddCartMutation } from "@/redux/api/cartApi";
 import { Product } from "@/types/product";
 import { getUserInfo } from "@/utils/auth";
-import { getFromLocalStorage } from "@/utils/local-storage";
 import { ShoppingCart } from "@mui/icons-material";
 import {
   Box,
@@ -23,9 +22,9 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const [addCart, { isLoading }] = useAddCartMutation();
   const router = useRouter();
   const { userId } = getUserInfo() as { userId: string };
-
   const handleAddToCart = async () => {
     // If user is not logged in, redirect to login page
     if (!userId) {
@@ -33,35 +32,14 @@ export default function ProductCard({ product }: { product: Product }) {
       router.push("/login");
       return;
     }
-    const accessToken = getFromLocalStorage(authKey);
     try {
       // Show loading toast
-      await toast.promise(
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/cart`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: accessToken } : {}),
-          },
-          body: JSON.stringify({
-            userId,
-            productId: product.id,
-            quantity: 1,
-          }),
-        }).then(async (res) => {
-          const data = await res.json();
-          console.log("Add to Cart Response:", data);
-          if (!res.ok) {
-            throw new Error(data.message || "Failed to add to cart.");
-          }
-        }),
-        {
-          loading: "Adding to cart...",
-          success: "Added to cart!",
-          error: (err) => err.message || "Something went wrong.",
-        }
-      );
+      const res = await addCart({ userId, productId: product.id, quantity: 1 });
+      if (res.data) {
+        toast.success("Added to cart!");
+      }
     } catch (error: any) {
+      toast.error(error.message || "Failed to add to cart");
       console.error("Add to Cart Error:", error);
     }
   };
@@ -248,20 +226,14 @@ export default function ProductCard({ product }: { product: Product }) {
             variant="contained"
             fullWidth
             startIcon={<ShoppingCart />}
-            sx={{
-              borderRadius: 2,
-              py: 1.5,
-              textTransform: "none",
-              fontWeight: 700,
-              backgroundColor: "primary.main",
-              "&:hover": {
-                backgroundColor: "primary.dark",
-              },
-            }}
-            disabled={product.inventory.stock === 0}
-            onClick={handleAddToCart} // Add this line
+            disabled={product.inventory.stock === 0 || isLoading}
+            onClick={handleAddToCart}
           >
-            {product.inventory.stock === 0 ? "Out of Stock" : "Add to Cart"}
+            {isLoading
+              ? "Adding..."
+              : product.inventory.stock === 0
+              ? "Out of Stock"
+              : "Add to Cart"}
           </Button>
         </Box>
       </Card>

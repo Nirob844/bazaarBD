@@ -101,7 +101,6 @@ const updateCartItem = async (
   quantity: number
 ): Promise<CartItem> => {
   if (quantity <= 0) throw new Error('Quantity must be greater than 0');
-
   return prisma.cartItem.update({
     where: { id: cartItemId },
     data: { quantity },

@@ -12,6 +12,8 @@ const Product = async (props: { params: { id: string } }) => {
   const {
     name,
     description,
+    sku,
+    status,
     price,
     promotions,
     category,
@@ -41,12 +43,15 @@ const Product = async (props: { params: { id: string } }) => {
             name={name}
             description={description}
             price={price}
+            sku={sku}
+            status={status}
             promotions={promotions}
             category={category}
             inventory={inventory}
             user={user}
             averageRating={averageRating}
             reviewsCount={reviews.length}
+            productId={product.id}
           />
         </Grid>
       </Grid>

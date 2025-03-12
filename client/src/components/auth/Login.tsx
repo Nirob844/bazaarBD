@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchLogin } from "@/services/auth";
 import { storeUserInfo } from "@/utils/auth";
 import {
   Box,
@@ -33,23 +34,7 @@ export default function LoginPage() {
     try {
       await toast.promise(
         (async () => {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/login`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ email, password }),
-            }
-          );
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(data.message || "Login failed. Please try again.");
-          }
-
+          const data = await fetchLogin(email, password);
           const accessToken = data.data;
           storeUserInfo(accessToken);
           router.push("/shop");

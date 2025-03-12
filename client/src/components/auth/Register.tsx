@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
+import { fetchRegister } from "@/services/auth";
 import {
   Box,
   Button,
@@ -35,30 +36,7 @@ export default function RegisterPage() {
     try {
       await toast.promise(
         (async () => {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ name, email, password }),
-            }
-          );
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(
-              data.message || "Registration failed. Please try again."
-            );
-          }
-
-          // Optional: store token if your backend returns one immediately after registration
-          // const accessToken = data.data;
-          // storeUserInfo(accessToken);
-
-          // Redirect to login page after successful registration
+          await fetchRegister(name, email, password);
           router.push("/login");
         })(),
         {

@@ -1,6 +1,8 @@
-import { authKey } from "@/constants/storage";
+import {
+  useDeleteCartMutation,
+  useUpdateCartMutation,
+} from "@/redux/api/cartApi";
 import { CartItem } from "@/types/cart";
-import { getFromLocalStorage } from "@/utils/local-storage";
 import { Add, Delete, Remove } from "@mui/icons-material";
 import {
   Box,
@@ -16,27 +18,17 @@ import toast from "react-hot-toast";
 
 export default function CartItemRow({ item }: { item: CartItem }) {
   const [quantity, setQuantity] = useState(item.quantity);
-  const accessToken = getFromLocalStorage(authKey);
-
+  const [updateCart] = useUpdateCartMutation();
+  const [deleteCart] = useDeleteCartMutation();
   const updateQuantity = async (newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setQuantity(newQuantity);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/cart/item/${item.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: accessToken } : {}),
-          },
-          body: JSON.stringify({ quantity: newQuantity }),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to update quantity");
-
-      toast.success("Quantity updated!");
+      if (newQuantity < 1) return;
+      console.log(newQuantity);
+      setQuantity(newQuantity);
+      const res = await updateCart({ id: item.id, quantity: newQuantity });
+      if (res.data) {
+        toast.success("Quantity updated!");
+      }
     } catch (error) {
       console.error("Failed to update quantity:", error);
       toast.error("Failed to update quantity");
@@ -45,20 +37,11 @@ export default function CartItemRow({ item }: { item: CartItem }) {
 
   const deleteItem = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/cart/item/${item.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: accessToken } : {}),
-          },
-        }
-      );
+      const res = await deleteCart(item.id);
 
-      if (!res.ok) throw new Error("Failed to delete item");
-
-      toast.success("Item deleted!");
+      if (res.data) {
+        toast.success("Item deleted!");
+      }
     } catch (error) {
       console.error("Failed to delete item:", error);
       toast.error("Failed to delete item");
