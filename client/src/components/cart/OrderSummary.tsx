@@ -5,11 +5,34 @@ import Link from "next/link";
 export default function OrderSummary({ cartItems }: { cartItems: CartItem[] }) {
   const theme = useTheme();
 
-  const subtotal = cartItems.reduce(
-    (acc, item) => acc + Number(item.product.price) * item.quantity,
-    0
-  );
-  const shipping = 15.0;
+  const calculateDiscountedPrice = (item: CartItem) => {
+    const product = item.product;
+
+    const discountPromotion = product.promotions.find(
+      (promotion) => promotion.discountPercentage
+    );
+
+    const discountPercentage = discountPromotion
+      ? parseFloat(discountPromotion.discountPercentage)
+      : 0;
+
+    const originalPrice = parseFloat(product.price);
+
+    // Calculate discounted price
+    const discountedPrice =
+      discountPercentage > 0
+        ? originalPrice * (1 - discountPercentage / 100)
+        : originalPrice;
+
+    return discountedPrice;
+  };
+
+  const subtotal = cartItems.reduce((acc, item) => {
+    const discountedPrice = calculateDiscountedPrice(item);
+    return acc + discountedPrice * item.quantity;
+  }, 0);
+
+  const shipping = subtotal >= 200 ? 0 : 15.0; // Free shipping over $200
   const total = subtotal + shipping;
 
   return (
@@ -60,7 +83,9 @@ export default function OrderSummary({ cartItems }: { cartItems: CartItem[] }) {
         variant="body2"
         sx={{ mt: 2, textAlign: "center", color: "text.secondary" }}
       >
-        Free shipping on orders over $200
+        {subtotal >= 200
+          ? "You got free shipping!"
+          : "Free shipping on orders over $200"}
       </Typography>
     </Paper>
   );

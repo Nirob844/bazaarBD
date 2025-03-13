@@ -1,7 +1,8 @@
 "use client";
 
 import { authKey } from "@/constants/storage";
-import { isLoggedIn, removeUserInfo } from "@/utils/auth";
+import { useGetCartQuery } from "@/redux/api/cartApi";
+import { getUserInfo, isLoggedIn, removeUserInfo } from "@/utils/auth";
 import {
   Close,
   Home,
@@ -60,10 +61,14 @@ const Navbar = () => {
   const theme = useTheme();
   const router = useRouter();
   const loggedIn = isLoggedIn();
-
+  const { userId } = getUserInfo() as { userId: string };
   useEffect(() => {
     setMounted(true);
   }, []);
+  const { data: cart, isLoading } = useGetCartQuery(userId);
+  if (isLoading) {
+    return null;
+  }
 
   const toggleDrawer = (open: boolean) => () => setMobileOpen(open);
 
@@ -304,7 +309,10 @@ const Navbar = () => {
                   borderRadius: 2,
                 }}
               >
-                <Badge badgeContent={2} color="error">
+                <Badge
+                  badgeContent={cart?.data?.items.length || 0}
+                  color="error"
+                >
                   <ShoppingCart />
                 </Badge>
               </IconButton>

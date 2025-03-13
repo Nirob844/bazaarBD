@@ -31,6 +31,20 @@ const getAllFromDB = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllPromotionProducts = catchAsync(
+  async (req: Request, res: Response) => {
+    const options = pick(req.query, paginationFields);
+    const result = await ProductService.getAllPromotionProducts(options);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Product data fetched!!',
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
 const getDataById = catchAsync(async (req: Request, res: Response) => {
   const result = await ProductService.getDataById(req.params.id);
   sendResponse(res, {
@@ -66,6 +80,7 @@ const deleteByIdFromDB = catchAsync(async (req: Request, res: Response) => {
 export const ProductController = {
   insertIntoDB,
   getAllFromDB,
+  getAllPromotionProducts,
   getDataById,
   updateOneInDB,
   deleteByIdFromDB,

@@ -13,6 +13,12 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
           product: {
             include: {
               imageUrls: true,
+              promotions: {
+                select: {
+                  discountPercentage: true,
+                  type: true,
+                },
+              },
             },
           },
         },
@@ -31,6 +37,12 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
             product: {
               include: {
                 imageUrls: true,
+                promotions: {
+                  select: {
+                    discountPercentage: true,
+                    type: true,
+                  },
+                },
               },
             },
           },

@@ -6,6 +6,7 @@ import { ProductController } from './product.controller';
 const router = express.Router();
 
 router.get('/', ProductController.getAllFromDB);
+router.get('/promotions', ProductController.getAllPromotionProducts);
 router.get('/:id', ProductController.getDataById);
 router.post('/', auth(ENUM_USER_ROLE.ADMIN), ProductController.insertIntoDB);
 router.patch(
