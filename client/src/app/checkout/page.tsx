@@ -1,57 +1,75 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { ShoppingCart } from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardMedia,
-  Container,
-  Grid,
-  List,
-  TextField,
-  Typography,
-} from "@mui/material";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { useGetCartQuery } from "@/redux/api/cartApi";
+import { useCheckoutMutation } from "@/redux/api/orderApi";
+import { CartItem } from "@/types/cart";
+import { Product } from "@/types/product";
+import { getUserInfo } from "@/utils/auth";
+import { Container, Grid, List, Typography } from "@mui/material";
 import { useState } from "react";
-
-const cartItems = [
-  {
-    id: 1,
-    name: "Premium Product 1",
-    price: "120.00",
-    image: "https://source.unsplash.com/random/400x300",
-    quantity: 2,
-  },
-  {
-    id: 2,
-    name: "Premium Product 2",
-    price: "80.00",
-    image: "https://source.unsplash.com/random/400x300",
-    quantity: 1,
-  },
-];
+// import { toast } from "react-hot-toast"; // Optional: for success/error message
+import CartItemCard from "@/components/checkout/CartItemCard";
+import OrderSummary from "@/components/checkout/OrderSummary";
+import { useRouter } from "next/navigation"; // Optional: redirect user
+import toast from "react-hot-toast";
 
 export default function Checkout() {
-  //const theme = useTheme();
-  const [shippingInfo, setShippingInfo] = useState({
-    name: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-  });
+  const router = useRouter();
+  const { userId } = getUserInfo() as { userId: string };
+  const { data, isLoading, refetch } = useGetCartQuery(userId);
+  const [checkout, { isLoading: isPlacingOrder }] = useCheckoutMutation();
 
-  const handleInputChange = (e: any) => {
-    const { name, value } = e.target;
-    setShippingInfo((prev) => ({ ...prev, [name]: value }));
+  const [error, setError] = useState<string | null>(null);
+
+  if (isLoading) return <LoadingSpinner />;
+
+  const cart = data.data;
+  const cartItems = cart.items;
+
+  // Helper: Calculate discounted price
+  const getDiscountedPrice = (product: Product) => {
+    const price = parseFloat(product.price);
+    const hasPromotion = product.promotions && product.promotions.length > 0;
+
+    if (hasPromotion) {
+      const discount = parseFloat(product.promotions[0].discountPercentage);
+      const discountedPrice = price - (price * discount) / 100;
+      return discountedPrice;
+    }
+
+    return price;
   };
 
+  // Calculate total
   const totalPrice = cartItems.reduce(
-    (total, item) => total + parseFloat(item.price) * item.quantity,
+    (total: number, item: { product: Product; quantity: number }) => {
+      const discountedPrice = getDiscountedPrice(item.product);
+      return total + discountedPrice * item.quantity;
+    },
     0
   );
+
+  // Place order handler
+  const handlePlaceOrder = async () => {
+    setError(null);
+    try {
+      const payload = { cartId: cart.id, userId: userId };
+      const response = await checkout(payload).unwrap();
+
+      console.log("Order successful:", response);
+
+      toast.success("Order placed successfully!");
+
+      refetch();
+      router.push("/order");
+    } catch (err: any) {
+      console.error("Order failed:", err);
+      setError(err?.data?.message || "Failed to place order");
+      toast.error(err?.data?.message || "Failed to place order");
+    }
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -66,109 +84,24 @@ export default function Checkout() {
             Your Cart
           </Typography>
           <List>
-            {cartItems.map((item) => (
-              <Card key={item.id} sx={{ mb: 2 }}>
-                <Grid container spacing={2} sx={{ p: 2 }}>
-                  <Grid item xs={4}>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={item.image}
-                      alt={item.name}
-                      sx={{ borderRadius: 2 }}
-                    />
-                  </Grid>
-                  <Grid item xs={8}>
-                    <CardContent>
-                      <Typography variant="h6" fontWeight={700}>
-                        {item.name}
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        ৳{item.price} x {item.quantity}
-                      </Typography>
-                      <Typography variant="body1" fontWeight={700}>
-                        ৳{(parseFloat(item.price) * item.quantity).toFixed(2)}
-                      </Typography>
-                    </CardContent>
-                  </Grid>
-                </Grid>
-              </Card>
+            {cartItems.map((item: CartItem) => (
+              <CartItemCard
+                key={item.id}
+                item={item}
+                getDiscountedPrice={getDiscountedPrice}
+              />
             ))}
           </List>
         </Grid>
 
-        {/* Shipping and Payment Info */}
+        {/* Order Summary */}
         <Grid item xs={12} md={4}>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-            Shipping Information
-          </Typography>
-          <Box component="form" sx={{ mb: 4 }}>
-            <TextField
-              fullWidth
-              label="Full Name"
-              name="name"
-              value={shippingInfo.name}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Address"
-              name="address"
-              value={shippingInfo.address}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="City"
-              name="city"
-              value={shippingInfo.city}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="State"
-              name="state"
-              value={shippingInfo.state}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="ZIP Code"
-              name="zip"
-              value={shippingInfo.zip}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-            />
-          </Box>
-
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-            Order Summary
-          </Typography>
-          <Card sx={{ p: 2, mb: 4 }}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Subtotal: ৳{totalPrice.toFixed(2)}
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Shipping: ৳0.00
-            </Typography>
-            <Typography variant="h6" fontWeight={700}>
-              Total: ৳{totalPrice.toFixed(2)}
-            </Typography>
-          </Card>
-
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            startIcon={<ShoppingCart />}
-            sx={{ py: 1.5, fontWeight: 700 }}
-          >
-            Place Order
-          </Button>
+          <OrderSummary
+            totalPrice={totalPrice}
+            isPlacingOrder={isPlacingOrder}
+            handlePlaceOrder={handlePlaceOrder}
+            error={error}
+          />
         </Grid>
       </Grid>
     </Container>

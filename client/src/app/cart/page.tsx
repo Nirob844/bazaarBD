@@ -6,7 +6,7 @@ import { useGetCartQuery } from "@/redux/api/cartApi";
 import { getUserInfo } from "@/utils/auth";
 import { CircularProgress, Container, Grid, Typography } from "@mui/material";
 
-export default function CartPage() {
+const Cart = () => {
   const { userId } = getUserInfo() as { userId: string };
 
   const { data: cart, isLoading } = useGetCartQuery(userId);
@@ -38,4 +38,6 @@ export default function CartPage() {
       </Grid>
     </Container>
   );
-}
+};
+
+export default Cart;

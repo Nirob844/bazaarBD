@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 
-export default function Profile() {
+const Profile = () => {
   const theme = useTheme();
   const router = useRouter();
 
@@ -113,4 +113,6 @@ export default function Profile() {
       </Container>
     </Box>
   );
-}
+};
+
+export default Profile;

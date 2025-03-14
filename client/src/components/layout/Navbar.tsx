@@ -377,7 +377,7 @@ const Navbar = () => {
           <MenuItem onClick={handleClose} component={Link} href="/profile">
             My Account
           </MenuItem>
-          <MenuItem onClick={handleClose} component={Link} href="/orders">
+          <MenuItem onClick={handleClose} component={Link} href="/order">
             My Orders
           </MenuItem>
           <MenuItem onClick={handleLogout}>Sign Out</MenuItem>

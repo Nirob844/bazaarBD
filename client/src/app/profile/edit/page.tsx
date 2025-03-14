@@ -23,7 +23,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function EditProfile() {
+const EditProfile = () => {
   const theme = useTheme();
   const router = useRouter();
 
@@ -114,7 +114,7 @@ export default function EditProfile() {
     e.preventDefault();
     try {
       const isoDob =
-        formData.profile.dob !== ""
+        formData.profile.dob !== null
           ? new Date(formData.profile.dob).toISOString()
           : null;
 
@@ -290,4 +290,6 @@ export default function EditProfile() {
       </Container>
     </Box>
   );
-}
+};
+
+export default EditProfile;

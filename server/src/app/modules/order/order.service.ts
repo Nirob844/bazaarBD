@@ -11,7 +11,16 @@ const cartToOrder = async (userId: string): Promise<Order> => {
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              promotions: {
+                select: {
+                  discountPercentage: true,
+                  type: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -21,11 +30,39 @@ const cartToOrder = async (userId: string): Promise<Order> => {
     throw new Error('Cart is empty or not found.');
   }
 
-  // Calculate total price
-  const totalAmount = cart.items.reduce(
-    (sum, item) => sum + item.quantity * Number(item.product.price),
-    0
-  );
+  // 👉 Calculate the total price with discounts applied
+  const totalAmount = cart.items.reduce((sum, item) => {
+    const product = item.product;
+
+    // Step 1: Base price
+    const basePrice = Number(product.price);
+
+    // Step 2: Get product's discount percentage (optional)
+    const productDiscount = product.discountPercentage
+      ? Number(product.discountPercentage)
+      : 0;
+
+    // Step 3: Get the highest promotion discount (if any)
+    const promotionDiscounts = product.promotions.map(p =>
+      Number(p.discountPercentage)
+    );
+    const maxPromotionDiscount = promotionDiscounts.length
+      ? Math.max(...promotionDiscounts)
+      : 0;
+
+    // Step 4: Choose the maximum discount
+    const effectiveDiscountPercentage = Math.max(
+      productDiscount,
+      maxPromotionDiscount
+    );
+
+    // Step 5: Calculate the discounted price
+    const discountedPrice =
+      basePrice - (basePrice * effectiveDiscountPercentage) / 100;
+
+    // Step 6: Add to the total sum (quantity * discounted price)
+    return sum + item.quantity * discountedPrice;
+  }, 0);
 
   return prisma.$transaction(async tx => {
     // Create the order with items
@@ -35,11 +72,34 @@ const cartToOrder = async (userId: string): Promise<Order> => {
         total: totalAmount,
         status: 'PENDING',
         items: {
-          create: cart.items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product.price,
-          })),
+          create: cart.items.map(item => {
+            const product = item.product;
+            const basePrice = Number(product.price);
+            const productDiscount = product.discountPercentage
+              ? Number(product.discountPercentage)
+              : 0;
+
+            const promotionDiscounts = product.promotions.map(p =>
+              Number(p.discountPercentage)
+            );
+            const maxPromotionDiscount = promotionDiscounts.length
+              ? Math.max(...promotionDiscounts)
+              : 0;
+
+            const effectiveDiscountPercentage = Math.max(
+              productDiscount,
+              maxPromotionDiscount
+            );
+
+            const discountedPrice =
+              basePrice - (basePrice * effectiveDiscountPercentage) / 100;
+
+            return {
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: discountedPrice, // Save discounted unit price here!
+            };
+          }),
         },
       },
       include: {
@@ -83,7 +143,7 @@ const cartToOrder = async (userId: string): Promise<Order> => {
       });
     }
 
-    // Remove items from the cart
+    // Clear cart
     await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
@@ -113,7 +173,22 @@ const getUserOrders = async (
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              imageUrls: {
+                select: {
+                  url: true,
+                  altText: true,
+                },
+              },
+              promotions: {
+                select: {
+                  type: true,
+                  discountPercentage: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -148,7 +223,11 @@ const getAllOrders = async (
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              promotions: true,
+            },
+          },
         },
       },
     },
@@ -181,7 +260,11 @@ const getDataById = async (id: string): Promise<Order | null> => {
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              promotions: true,
+            },
+          },
         },
       },
       payments: true,

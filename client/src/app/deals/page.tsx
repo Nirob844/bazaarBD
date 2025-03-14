@@ -3,7 +3,7 @@ import ProductCard from "@/components/shop/ProductCard";
 import { Product } from "@/types/product";
 import { Box, Container, Grid, Typography } from "@mui/material";
 
-export default async function BestDeals() {
+const BestDeals = async () => {
   // Fetch promotion products directly in the Server Component
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/products/promotions?limit=6`,
@@ -52,4 +52,6 @@ export default async function BestDeals() {
       </Container>
     </Box>
   );
-}
+};
+
+export default BestDeals;
