@@ -20,7 +20,7 @@ router.get(
 router.post('/', auth(ENUM_USER_ROLE.CUSTOMER), CartController.addItemToCart);
 
 router.patch(
-  '/item',
+  '/item/:cartItemId',
   auth(ENUM_USER_ROLE.CUSTOMER),
   CartController.updateCartItem
 );

@@ -10,22 +10,6 @@ import {
   productSearchAbleFields,
 } from './product.constants';
 
-// const insertIntoDB = async (data: Product): Promise<Product> => {
-//   const existingSku = await prisma.product.findUnique({
-//     where: { sku: data.sku },
-//   });
-
-//   if (existingSku) throw new Error('SKU must be unique!');
-
-//   const userExists = await prisma.user.findUnique({
-//     where: { id: data.userId },
-//   });
-
-//   if (!userExists) throw new Error('Vendor not found!');
-
-//   return prisma.product.create({ data });
-// };
-
 const insertIntoDB = async (
   data: Product & { inventory?: Inventory }
 ): Promise<Product> => {
@@ -200,6 +184,67 @@ const getAllFromDB = async (
   };
 };
 
+const getAllPromotionProducts = async (
+  options: IPaginationOptions
+): Promise<IGenericResponse<Product[]>> => {
+  const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+
+  const result = await prisma.product.findMany({
+    where: {
+      promotions: {
+        some: {},
+      },
+    },
+    skip,
+    take: limit,
+    orderBy: {
+      createdAt: 'desc',
+    },
+    include: {
+      imageUrls: {
+        select: {
+          url: true,
+          altText: true,
+        },
+      },
+      category: {
+        select: {
+          name: true,
+        },
+      },
+      inventory: {
+        select: {
+          stock: true,
+        },
+      },
+      promotions: {
+        select: {
+          id: true,
+          type: true,
+          discountPercentage: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.product.count({
+    where: {
+      promotions: {
+        some: {},
+      },
+    },
+  });
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+    },
+    data: result,
+  };
+};
+
 const getDataById = async (id: string): Promise<Product | null> => {
   return prisma.product.findUnique({
     where: { id },
@@ -289,6 +334,7 @@ const deleteByIdFromDB = async (id: string): Promise<Product> => {
 export const ProductService = {
   insertIntoDB,
   getAllFromDB,
+  getAllPromotionProducts,
   getDataById,
   updateOneInDB,
   deleteByIdFromDB,

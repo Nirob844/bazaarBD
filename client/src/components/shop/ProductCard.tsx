@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useAddCartMutation } from "@/redux/api/cartApi";
 import { Product } from "@/types/product";
+import { getUserInfo } from "@/utils/auth";
 import { ShoppingCart } from "@mui/icons-material";
 import {
   Box,
@@ -15,8 +18,32 @@ import {
 } from "@mui/material";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const [addCart, { isLoading }] = useAddCartMutation();
+  const router = useRouter();
+  const { userId } = getUserInfo() as { userId: string };
+  const handleAddToCart = async () => {
+    // If user is not logged in, redirect to login page
+    if (!userId) {
+      toast.error("Please log in to add items to your cart.");
+      router.push("/login");
+      return;
+    }
+    try {
+      // Show loading toast
+      const res = await addCart({ userId, productId: product.id, quantity: 1 });
+      if (res.data) {
+        toast.success("Added to cart!");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add to cart");
+      console.error("Add to Cart Error:", error);
+    }
+  };
+
   const mainImage = product.imageUrls[0]?.url || "/placeholder-product.jpg";
 
   const discountPromotion = product.promotions.find(
@@ -199,19 +226,14 @@ export default function ProductCard({ product }: { product: Product }) {
             variant="contained"
             fullWidth
             startIcon={<ShoppingCart />}
-            sx={{
-              borderRadius: 2,
-              py: 1.5,
-              textTransform: "none",
-              fontWeight: 700,
-              backgroundColor: "primary.main",
-              "&:hover": {
-                backgroundColor: "primary.dark",
-              },
-            }}
-            disabled={product.inventory.stock === 0}
+            disabled={product.inventory.stock === 0 || isLoading}
+            onClick={handleAddToCart}
           >
-            {product.inventory.stock === 0 ? "Out of Stock" : "Add to Cart"}
+            {isLoading
+              ? "Adding..."
+              : product.inventory.stock === 0
+              ? "Out of Stock"
+              : "Add to Cart"}
           </Button>
         </Box>
       </Card>

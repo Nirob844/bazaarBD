@@ -1,4 +1,8 @@
 import { User, UserProfile } from '@prisma/client';
+import { Request } from 'express';
+import { JwtPayload } from 'jsonwebtoken';
+import { FileUploadHelper } from '../../../helpers/fileUploadHelper';
+import { IUploadFile } from '../../../interfaces/file';
 import prisma from '../../../shared/prisma';
 
 const getUserProfile = async (userId: string): Promise<User | null> => {
@@ -13,11 +17,18 @@ const getUserProfile = async (userId: string): Promise<User | null> => {
   return profile;
 };
 
-const updateUserProfile = async (
-  userId: string,
-  payload: Partial<User>
-): Promise<User> => {
-  const { name, profile } = payload as Partial<User & { profile: UserProfile }>;
+const updateUserProfile = async (req: Request): Promise<User> => {
+  const file = req.file as IUploadFile;
+  // Handle file upload if a new image is provided
+  if (file) {
+    const uploadImage = await FileUploadHelper.uploadToCloudinary(file);
+    req.body.profile.avatar = uploadImage?.secure_url;
+  }
+  const { userId } = req.user as JwtPayload;
+  const { name, profile } = req.body as Partial<
+    User & { profile: UserProfile }
+  >;
+
   if (name) {
     await prisma.user.update({
       where: { id: userId },

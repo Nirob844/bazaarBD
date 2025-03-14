@@ -14,6 +14,7 @@ export interface Product {
   name: string;
   description: string;
   price: string;
+  sku: string;
   discountPercentage: string | null;
   status: string;
   category: {

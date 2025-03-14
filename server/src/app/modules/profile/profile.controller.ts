@@ -22,8 +22,7 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
 
 // Update user profile
 const updateUserProfile = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user as JwtPayload;
-  const updatedUser = await ProfileService.updateUserProfile(userId, req.body);
+  const updatedUser = await ProfileService.updateUserProfile(req);
 
   sendResponse<User>(res, {
     statusCode: httpStatus.OK,
