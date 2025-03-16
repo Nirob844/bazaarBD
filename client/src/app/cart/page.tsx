@@ -2,22 +2,17 @@
 
 import CartTable from "@/components/cart/CartTable";
 import OrderSummary from "@/components/cart/OrderSummary";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useGetCartQuery } from "@/redux/api/cartApi";
 import { getUserInfo } from "@/utils/auth";
-import { CircularProgress, Container, Grid, Typography } from "@mui/material";
+import { Container, Grid, Typography } from "@mui/material";
 
 const Cart = () => {
   const { userId } = getUserInfo() as { userId: string };
 
   const { data: cart, isLoading } = useGetCartQuery(userId);
 
-  if (isLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
+  if (isLoading) return <LoadingSpinner />;
 
   const { items } = cart.data || { items: [] };
 
