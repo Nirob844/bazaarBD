@@ -27,25 +27,29 @@ import ProfileMenu from "./ProfileMenu";
 import SearchBar from "./SearchBar";
 
 const Navbar = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  const openProfile = Boolean(anchorEl);
   const theme = useTheme();
   const router = useRouter();
-  const loggedIn = isLoggedIn();
 
+  const [mounted, setMounted] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const openProfile = Boolean(anchorEl);
+
+  // Search bar logic
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("searchTerm") || "";
   const [searchTerm, setSearchTerm] = useState(initialSearch);
 
-  const { userId } = getUserInfo() as { userId: string };
-
+  // Control drawer open/close
   const toggleDrawer = (open: boolean) => () => setMobileOpen(open);
 
-  const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) =>
+  // Profile menu handlers
+  const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
+  };
 
   const handleClose = () => setAnchorEl(null);
 
@@ -55,16 +59,31 @@ const Navbar = () => {
     router.push("/login");
   };
 
+  // Use effect to handle client-only logic (window, localStorage)
   useEffect(() => {
     setMounted(true);
+
+    const loginStatus = isLoggedIn();
+    const user = getUserInfo() as { userId: string };
+
+    setLoggedIn(loginStatus);
+    setUserId(user?.userId ?? null);
   }, []);
 
-  const { data: cart, isLoading } = useGetCartQuery(userId);
-  const { data: userData, isLoading: profileLoading } = useProfileQuery({});
+  const { data: cart, isLoading: cartLoading } = useGetCartQuery(userId, {
+    skip: !userId,
+  });
 
-  if (!mounted || isLoading || profileLoading) return null;
+  const { data: userData, isLoading: profileLoading } = useProfileQuery(
+    {},
+    { skip: !loggedIn }
+  );
 
-  const { name, profile } = userData?.data;
+  if (!mounted || cartLoading || profileLoading) {
+    return null; // or <div>Loading...</div> if you want to show something
+  }
+
+  const { name, profile } = userData?.data || {};
 
   return (
     <AppBar
@@ -114,14 +133,8 @@ const Navbar = () => {
                   src={profile?.avatar || ""}
                   sx={{ width: 32, height: 32 }}
                 >
-                  {name ? name.toUpperCase() : "U"}
+                  {name ? name.charAt(0).toUpperCase() : "U"}
                 </Avatar>
-                {/* <Typography
-                  variant="body2"
-                  sx={{ color: theme.palette.common.white }}
-                >
-                  {name || "My Account"}
-                </Typography> */}
               </Button>
             </>
           ) : (
