@@ -68,7 +68,7 @@ const Navbar = () => {
 
     setLoggedIn(loginStatus);
     setUserId(user?.userId ?? null);
-  }, []);
+  }, [getUserInfo(), isLoggedIn()]);
 
   const { data: cart, isLoading: cartLoading } = useGetCartQuery(userId, {
     skip: !userId,
