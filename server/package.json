@@ -1,5 +1,5 @@
 {
-  "name": "bazar_bd_backend",
+  "name": "bazaarbd-server",
   "version": "1.0.0",
   "description": "",
   "main": "src/server.ts",
