@@ -22,8 +22,8 @@ const ProductSearch = () => {
     }
 
     params.set("page", "1");
-
     router.push(`/shop?${params.toString()}`);
+    setSearchTerm("");
   };
 
   return (

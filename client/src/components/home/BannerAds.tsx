@@ -18,7 +18,7 @@ const bannerAds = [
     subtitle: "Up to 50% Off",
     description: "Don't miss out on our biggest sale of the season. Shop now!",
     image: "/images/banners/summer-sale.jpg",
-    link: "/summer-sale",
+    link: "/shop",
     buttonText: "Shop Now",
   },
   {
@@ -27,7 +27,7 @@ const bannerAds = [
     subtitle: "Explore the Latest Trends",
     description: "Discover our newest collection. Be the first to shop!",
     image: "/images/banners/new-arrivals.jpg",
-    link: "/new-arrivals",
+    link: "/shop",
     buttonText: "Explore",
   },
 ];
