@@ -15,14 +15,17 @@
     "@mui/icons-material": "^7.0.0",
     "@mui/material": "^7.0.0",
     "@reduxjs/toolkit": "^2.6.1",
+    "@types/yup": "^0.32.0",
     "axios": "^1.8.4",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.55.0",
     "react-hot-toast": "^2.5.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "6",
-    "redux-persist": "^6.0.0"
+    "redux-persist": "^6.0.0",
+    "yap": "^0.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

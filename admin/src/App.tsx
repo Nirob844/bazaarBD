@@ -1,9 +1,9 @@
+import RootLayout from "./layout/root/Root";
+
 function App() {
   return (
     <>
-      <div>
-        <p>home page</p>
-      </div>
+      <RootLayout />
     </>
   );
 }
