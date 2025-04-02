@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { logout, useCurrentToken } from "../redux/slice/authSlice";
 import { decodeToken } from "../utils/jwt";
 
@@ -20,8 +20,8 @@ interface DecodedUser {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }) => {
-  const token = useSelector(useCurrentToken) as string;
-  const dispatch = useDispatch();
+  const token = useAppSelector(useCurrentToken) as string;
+  const dispatch = useAppDispatch();
   let user: DecodedUser | null = null;
 
   if (token) {
