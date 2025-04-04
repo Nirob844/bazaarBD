@@ -349,6 +349,7 @@ const Product = () => {
 
       <ModalComponent
         open={isModalOpen}
+        size="large"
         onClose={handleCloseModal}
         title={selectedProduct ? "Edit Product" : "Create New Product"}
       >
