@@ -2,6 +2,7 @@ import DashboardLayout from "../layout/dashboard/Dashboard";
 import Category from "../pages/category/Category";
 import Dashboard from "../pages/dashboard/Dashboard";
 import Product from "../pages/product/Product";
+import User from "../pages/user/User";
 import ProtectedRoute from "./ProtectedRoute";
 
 const adminRoutes = {
@@ -13,6 +14,14 @@ const adminRoutes = {
       element: (
         <ProtectedRoute role="ADMIN">
           <Dashboard />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "user",
+      element: (
+        <ProtectedRoute role="ADMIN">
+          <User />
         </ProtectedRoute>
       ),
     },

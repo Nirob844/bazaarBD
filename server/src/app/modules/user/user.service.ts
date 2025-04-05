@@ -54,6 +54,9 @@ const getAllUsers = async (
         : {
             createdAt: 'desc',
           },
+    include: {
+      profile: true,
+    },
   });
   const total = await prisma.user.count({
     where: whereConditions,
