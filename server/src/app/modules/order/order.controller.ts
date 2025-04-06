@@ -34,7 +34,7 @@ const getAllOrders = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'User orders fetched successfully!',
+    message: 'All Orders fetched successfully!',
     meta: result.meta,
     data: result.data,
   });
@@ -76,17 +76,8 @@ const getUserOrders = catchAsync(async (req: Request, res: Response) => {
 
 // ✅ Update Order Status
 const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
-  const { orderId } = req.params;
   const { status } = req.body;
-
-  if (!orderId || !status) {
-    return res.status(httpStatus.BAD_REQUEST).json({
-      success: false,
-      message: 'Order ID and status are required!',
-    });
-  }
-
-  const result = await OrderService.updateOrderStatus(orderId, status);
+  const result = await OrderService.updateOrderStatus(req.params.id, status);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

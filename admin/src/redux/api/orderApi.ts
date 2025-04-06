@@ -24,8 +24,8 @@ export const addOrderApi = baseApi.injectEndpoints({
     }),
 
     updateOrder: build.mutation({
-      query: ({ id, ...data }) => ({
-        url: `${ORDER_URL}/item/${id}`,
+      query: ({ id, data }) => ({
+        url: `${ORDER_URL}/${id}`,
         method: "PATCH",
         data,
       }),
@@ -34,7 +34,7 @@ export const addOrderApi = baseApi.injectEndpoints({
 
     deleteOrder: build.mutation({
       query: (id) => ({
-        url: `${ORDER_URL}/item/${id}`,
+        url: `${ORDER_URL}/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: [tagTypes.order],

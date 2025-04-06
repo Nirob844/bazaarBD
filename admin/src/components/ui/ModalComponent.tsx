@@ -5,6 +5,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: "small" | "medium" | "large"; // Optional size prop
 }
 
 const ModalComponent: React.FC<ModalProps> = ({
@@ -12,7 +13,20 @@ const ModalComponent: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
+  size = "medium", // Default to medium
 }) => {
+  const getWidth = () => {
+    switch (size) {
+      case "small":
+        return 300;
+      case "large":
+        return 800;
+      case "medium":
+      default:
+        return 500;
+    }
+  };
+
   return (
     <Modal open={open} onClose={onClose} aria-labelledby="modal-title">
       <Box
@@ -21,13 +35,14 @@ const ModalComponent: React.FC<ModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: 400,
+          width: getWidth(),
           bgcolor: "background.paper",
           boxShadow: 24,
+          borderRadius: 2,
           p: 4,
         }}
       >
-        <Typography id="modal-title" variant="h6" component="h2">
+        <Typography id="modal-title" variant="h6" component="h2" mb={2}>
           {title}
         </Typography>
         {children}

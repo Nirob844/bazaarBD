@@ -238,6 +238,7 @@ const getAllOrders = async (
             createdAt: 'desc',
           },
   });
+
   const total = await prisma.order.count({
     where: whereConditions,
   });
@@ -275,11 +276,12 @@ const getDataById = async (id: string): Promise<Order | null> => {
 };
 
 const updateOrderStatus = async (
-  orderId: string,
+  id: string,
   status: OrderStatus
 ): Promise<Order> => {
+  console.log('updateOrderStatus', id, status);
   const existingOrder = await prisma.order.findUnique({
-    where: { id: orderId },
+    where: { id },
   });
 
   if (!existingOrder) {
@@ -287,7 +289,7 @@ const updateOrderStatus = async (
   }
 
   return prisma.order.update({
-    where: { id: orderId },
+    where: { id },
     data: { status },
   });
 };

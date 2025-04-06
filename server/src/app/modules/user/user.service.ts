@@ -54,6 +54,9 @@ const getAllUsers = async (
         : {
             createdAt: 'desc',
           },
+    include: {
+      profile: true,
+    },
   });
   const total = await prisma.user.count({
     where: whereConditions,
@@ -88,6 +91,7 @@ const updateUser = async (
   id: string,
   payload: Partial<User>
 ): Promise<User> => {
+  console.log('payload', payload);
   const result = await prisma.user.update({
     where: {
       id,

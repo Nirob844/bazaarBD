@@ -1,51 +1,93 @@
-import axios from "axios";
-import { authKey } from "../constants/storageKey";
-import { IGenericErrorResponse, ResponseSuccessType } from "../types/common";
-import { getFromLocalStorage } from "../utils/local-storage";
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
+import { setUser } from "../redux/slice/authSlice";
+import { store } from "../redux/store";
+import { getNewAccessToken } from "../utils/auth";
+import { decodeToken } from "../utils/jwt";
 
-const instance = axios.create();
-instance.defaults.headers.post["Content-Type"] = "application/json";
-instance.defaults.headers["Accept"] = "application/json";
-instance.defaults.timeout = 60000;
+interface CustomAxiosRequestConfig extends AxiosRequestConfig {
+  sent?: boolean; // to prevent infinite retry loop
+}
 
-// Add a request interceptor
+interface ErrorResponse {
+  statusCode: number;
+  message: string;
+  errorMessages?: string[] | string;
+}
+
+const instance: AxiosInstance = axios.create({
+  timeout: 60000,
+  headers: {
+    "Content-Type": "application/json",
+    accept: "application/json",
+  },
+});
+
+// Request Interceptor
 instance.interceptors.request.use(
-  function (config) {
-    // Do something before request is sent
-    const accessToken = getFromLocalStorage(authKey);
+  (config) => {
+    const state = store.getState();
+    const accessToken = state.auth.token;
+
     if (accessToken) {
-      config.headers.Authorization = accessToken;
+      config.headers.set("Authorization", accessToken);
     }
+
     return config;
   },
-  function (error) {
-    // Do something with request error
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
-// Add a response interceptor
+// Response Interceptor
 instance.interceptors.response.use(
-  function (response) {
-    // Any status code that lie within the range of 2xx cause this function to trigger
-    // Do something with response data
-    const responseObject: ResponseSuccessType = {
+  (response: AxiosResponse) => {
+    response.data = {
       data: response?.data?.data,
       meta: response?.data?.meta,
     };
-    return {
-      ...response,
-      data: responseObject,
-    };
+    return response;
   },
-  function (error) {
-    const responseObject: IGenericErrorResponse = {
-      statusCode: error?.response?.data?.statusCode || 500,
-      message: error?.response?.data?.message || "Something went wrong",
-      errorMessages: error?.response?.data?.message,
-    };
-    return responseObject;
-    //return Promise.reject(error);
+  async (error: AxiosError) => {
+    const config = error.config as CustomAxiosRequestConfig;
+
+    if (error?.response?.status === 500 && !config?.sent) {
+      config.sent = true;
+
+      try {
+        const res = await getNewAccessToken();
+        const accessToken = res?.data?.accessToken;
+        const user = decodeToken(accessToken);
+
+        store.dispatch(setUser({ user, token: accessToken }));
+
+        config.headers = {
+          ...config.headers,
+          Authorization: accessToken,
+        };
+
+        return instance(config);
+      } catch {
+        return Promise.reject({
+          statusCode: 401,
+          message: "Token refresh failed",
+          errorMessages: ["Session expired. Please login again."],
+        } as ErrorResponse);
+      }
+    }
+
+    return Promise.reject({
+      statusCode: error?.response?.status || 500,
+      message:
+        (error?.response?.data as { message?: string })?.message ||
+        "Something went wrong!!!",
+      errorMessages: (error?.response?.data as { message?: string })?.message,
+    } as ErrorResponse);
   }
 );
 
