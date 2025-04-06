@@ -102,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       ],
     },
-    { text: "Orders", icon: <LocalMallIcon />, path: "all_orders" },
+    { text: "Orders", icon: <LocalMallIcon />, path: "order" },
   ];
 
   const isActive = (path: string) =>

@@ -11,16 +11,17 @@ router.post(
   OrderController.cartToOrder
 );
 
+router.get('/', auth(ENUM_USER_ROLE.ADMIN), OrderController.getAllOrders);
+
 router.get(
-  '/',
+  '/user-orders',
   auth(ENUM_USER_ROLE.CUSTOMER, ENUM_USER_ROLE.ADMIN),
   OrderController.getUserOrders
 );
 
-router.get('/all', auth(ENUM_USER_ROLE.ADMIN), OrderController.getAllOrders);
 router.get('/:id', auth(ENUM_USER_ROLE.ADMIN), OrderController.getDataById);
 router.patch(
-  '/:id/status',
+  '/:id',
   auth(ENUM_USER_ROLE.ADMIN),
   OrderController.updateOrderStatus
 );

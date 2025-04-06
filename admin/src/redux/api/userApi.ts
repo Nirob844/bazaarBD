@@ -32,7 +32,7 @@ const userApi = baseApi.injectEndpoints({
 
     //? Update a business type by ID
     updateUser: build.mutation({
-      query: ({ id, ...data }) => ({
+      query: ({ id, data }) => ({
         url: `/users/${id}`,
         method: "PATCH",
         data,
