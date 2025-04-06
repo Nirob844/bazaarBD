@@ -60,6 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { text: "User Management", icon: <GroupIcon />, path: "user" },
     { text: "Category", icon: <CategoryIcon />, path: "category" },
     { text: "Product", icon: <InventoryIcon />, path: "product" },
+    { text: "Orders", icon: <LocalMallIcon />, path: "order" },
     {
       text: "Promotion",
       icon: <LocalOfferIcon />,
@@ -102,7 +103,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       ],
     },
-    { text: "Orders", icon: <LocalMallIcon />, path: "order" },
   ];
 
   const isActive = (path: string) =>
