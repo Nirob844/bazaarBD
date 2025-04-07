@@ -17,86 +17,46 @@ import {
 import { ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
 import Form from "../../components/forms/Form";
-import FormFileUpload from "../../components/forms/FormFileUpload";
 import FormInput from "../../components/forms/FormInput";
-import FormSelectField from "../../components/forms/FormSelectField";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ModalComponent from "../../components/ui/ModalComponent";
 import PaginationComponent from "../../components/ui/PaginationComponent";
 import TableComponent from "../../components/ui/TableComponent";
-import { useGetCategoryQuery } from "../../redux/api/categoryApi";
+
+import FormSelectField from "../../components/forms/FormSelectField";
+import { useGetProductQuery } from "../../redux/api/productApi";
 import {
-  useCreateProductMutation,
-  useDeleteProductMutation,
-  useGetProductQuery,
-  useUpdateProductMutation,
-} from "../../redux/api/productApi";
-import { useAppSelector } from "../../redux/hooks";
-import { selectCurrentUser } from "../../redux/slice/authSlice";
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface Promotion {
-  discountPercentage?: string;
-  type?: string;
-}
-
-interface Inventory {
-  stock: number;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: string;
-  sku: string;
-  status: string;
-  inventory: Inventory;
-  categoryId: string;
-  userId: string;
-  imageUrls: { url: string }[];
-  promotions: Promotion[];
-  createdAt: string;
-  category?: {
-    name: string;
-  };
-}
+  useCreatePromotionMutation,
+  useDeletePromotionMutation,
+  useGetPromotionQuery,
+  useUpdatePromotionMutation,
+} from "../../redux/api/promotion";
+import type { Product, Promotion } from "../../types/product";
 
 interface FormValues {
-  name: string;
-  description: string;
-  price: string;
-  sku: string;
-  status: string;
-  inventory: {
-    stock: number;
-  };
-  categoryId: string;
-  userId: string;
-  file?: File;
+  type: string;
+  discountPercentage: string;
+  productId: string;
 }
 
 interface Column {
   id: string;
   label: string;
-  format?: (value: any, row?: Product) => React.ReactNode;
+  format?: (value: any, row?: Promotion) => React.ReactNode;
 }
 
-const Product = () => {
+const Promotion = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(
+    null
+  );
+  const [promotionToDelete, setPromotionToDelete] = useState<string | null>(
+    null
+  );
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
-
-  const currentUser = useAppSelector(selectCurrentUser);
-  const userId = currentUser?.userId || "";
 
   const query = {
     limit: size,
@@ -104,77 +64,79 @@ const Product = () => {
     ...(searchTerm && { searchTerm }),
   };
 
-  const [createProduct, { isLoading: createLoading }] =
-    useCreateProductMutation();
-  const [updateProduct, { isLoading: updateLoading }] =
-    useUpdateProductMutation();
-  const [deleteProduct, { isLoading: deleteLoading }] =
-    useDeleteProductMutation();
+  const [createPromotion, { isLoading: createLoading }] =
+    useCreatePromotionMutation();
+  const [updatePromotion, { isLoading: updateLoading }] =
+    useUpdatePromotionMutation();
+  const [deletePromotion, { isLoading: deleteLoading }] =
+    useDeletePromotionMutation();
 
-  const { data: products, isLoading: productsLoading } =
-    useGetProductQuery(query);
-  const { data: categories, isLoading: categoriesLoading } =
-    useGetCategoryQuery({});
+  const { data: promotions, isLoading: promotionsLoading } =
+    useGetPromotionQuery(query);
 
-  const categoryOptions =
-    categories?.data?.map((category: Category) => ({
-      value: category.id,
-      label: category.name,
+  const { data: products, isLoading: productsLoading } = useGetProductQuery({});
+
+  const promotionOptions = [
+    { value: "FEATURED", label: "Featured" },
+    { value: "FLASH_SALE", label: "Flash Sale" },
+    { value: "NEW_ARRIVAL", label: "New Arrival" },
+    { value: "BEST_DEAL", label: "Best Deal" },
+    { value: "TOP_SELLING", label: "Top Selling" },
+  ];
+
+  const productOptions =
+    products?.data?.map((product: Product) => ({
+      value: product.id,
+      label: product.name,
     })) || [];
 
   const columns: Column[] = [
     {
-      id: "imageUrls",
+      id: "product.imageUrls",
       label: "Photo",
-      format: (value: { url: string }[]) => (
+      format: (_: any, row?: any) => (
         <Avatar
-          src={value[0]?.url}
-          alt="Product"
+          src={row?.product?.imageUrls?.[0]?.url || ""}
+          alt="Promotion"
           sx={{ width: 50, height: 50 }}
         />
       ),
     },
-    { id: "name", label: "Product Name" },
     {
-      id: "category",
-      label: "Category",
-      format: (_: any, row?: Product) => row?.category?.name || "N/A",
+      id: "product.name",
+      label: "Product Name",
+      format: (_: any, row?: any) => row?.product?.name || " - ",
     },
-    // { id: "sku", label: "SKU" },
     {
-      id: "price",
+      id: "product.price",
       label: "Price",
-      format: (value: string) => `$${parseFloat(value).toFixed(2)}`,
+      format: (_: any, row?: any) => row?.product?.price || 0,
     },
     {
-      id: "promotions",
-      label: "Discount",
-      format: (value: Promotion[]) =>
-        value?.length > 0 ? `${value[0]?.discountPercentage}%` : "No Discount",
+      id: "discountPercentage",
+      label: "Discount (%)",
+      format: (value: string) => `${value}%`,
     },
     {
-      id: "promotions",
+      id: "type",
       label: "Discount Type",
-      format: (value: Promotion[]) =>
-        value?.length > 0 ? `${value[0]?.type}` : "No Discount",
     },
     {
       id: "discountedPrice",
       label: "Discounted Price",
-      format: (_: any, row?: Product) => {
-        const price = parseFloat(row?.price ?? "0");
-        const discount = row?.promotions?.[0]?.discountPercentage;
+      format: (_: any, row?: any) => {
+        const price = parseFloat(row?.product?.price ?? "0");
+        const discount = row?.discountPercentage;
         if (!discount) return "-";
         const discounted = price * (1 - parseFloat(discount) / 100);
         return `$${discounted.toFixed(2)}`;
       },
     },
     {
-      id: "inventory.stock",
+      id: "product.inventory.stock",
       label: "Stock",
-      format: (_: any, row?: Product) => row?.inventory.stock || 0,
+      format: (_: any, row?: any) => row?.product?.inventory?.stock || 0,
     },
-    { id: "status", label: "Status" },
     {
       id: "createdAt",
       label: "Created At",
@@ -183,7 +145,7 @@ const Product = () => {
     {
       id: "actions",
       label: "Actions",
-      format: (_: any, row?: Product) => (
+      format: (_: any, row?: any) => (
         <Stack direction="row" spacing={1}>
           <Button
             size="small"
@@ -204,54 +166,40 @@ const Product = () => {
       ),
     },
   ];
-
   const handleCreate = () => {
-    setSelectedProduct(null);
+    setSelectedPromotion(null);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedProduct(null);
+    setSelectedPromotion(null);
   };
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const productData = {
-        name: data.name,
-        description: data.description || "",
-        price: data.price,
-        sku: data.sku,
-        status: data.status || "active",
-        categoryId: data.categoryId,
-        userId,
-        inventory: {
-          stock: Number(data.inventory.stock) || 0,
-        },
+      const promotionData = {
+        type: data.type,
+        discountPercentage: data.discountPercentage,
+        productId: data.productId,
       };
 
-      if (selectedProduct) {
-        const res = await updateProduct({
-          id: selectedProduct.id,
-          data: productData,
+      if (selectedPromotion) {
+        const res = await updatePromotion({
+          id: selectedPromotion.id,
+          data: promotionData,
         });
         if ("data" in res) {
-          toast.success("Product updated successfully");
+          toast.success("Promotion updated successfully");
         } else {
-          toast.error("Failed to update product");
+          toast.error("Failed to update promotion");
         }
       } else {
-        const formData = new FormData();
-        if (data.file) {
-          formData.append("file", data.file);
-        }
-        formData.append("data", JSON.stringify(productData));
-
-        const res = await createProduct(formData);
+        const res = await createPromotion(promotionData);
         if ("data" in res) {
-          toast.success("Product created successfully");
+          toast.success("Promotion created successfully");
         } else {
-          toast.error("Failed to create product");
+          toast.error("Failed to create promotion");
         }
       }
       handleCloseModal();
@@ -261,27 +209,27 @@ const Product = () => {
     }
   };
 
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
+  const handleEdit = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
     setIsModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
-    setProductToDelete(id);
+    setPromotionToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (!productToDelete) return;
+    if (!promotionToDelete) return;
 
     try {
-      await deleteProduct(productToDelete);
-      toast.success("Product deleted successfully");
+      await deletePromotion(promotionToDelete);
+      toast.success("Promotion deleted successfully");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {
       setIsDeleteModalOpen(false);
-      setProductToDelete(null);
+      setPromotionToDelete(null);
     }
   };
 
@@ -295,24 +243,17 @@ const Product = () => {
   };
 
   const defaultValues: Partial<FormValues> = {
-    name: selectedProduct?.name || "",
-    description: selectedProduct?.description || "",
-    price: selectedProduct?.price || "",
-    sku: selectedProduct?.sku || "",
-    status: selectedProduct?.status || "active",
-    inventory: {
-      stock: selectedProduct?.inventory?.stock || 0,
-    },
-    categoryId: selectedProduct?.categoryId || "",
-    userId: userId,
+    type: selectedPromotion?.type || "",
+    discountPercentage: selectedPromotion?.discountPercentage || "",
+    productId: selectedPromotion?.productId || "",
   };
 
-  if (productsLoading || categoriesLoading) return <LoadingSpinner />;
+  if (promotionsLoading || productsLoading) return <LoadingSpinner />;
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Products
+        Promotions
       </Typography>
 
       <Box
@@ -355,12 +296,12 @@ const Product = () => {
         </Button>
       </Box>
 
-      <TableComponent columns={columns} data={products?.data || []} />
+      <TableComponent columns={columns} data={promotions?.data || []} />
 
       <PaginationComponent
         page={page}
         rowsPerPage={size}
-        totalItems={products?.meta?.total || 0}
+        totalItems={promotions?.meta?.total || 0}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
       />
@@ -369,43 +310,28 @@ const Product = () => {
         open={isModalOpen}
         size="large"
         onClose={handleCloseModal}
-        title={selectedProduct ? "Edit Product" : "Create New Product"}
+        title={selectedPromotion ? "Edit Promotion" : "Create New Promotion"}
       >
         <Form submitHandler={onSubmit} defaultValues={defaultValues}>
           <Stack spacing={2}>
-            <FormInput label="Product Name" name="name" required />
-            <FormInput label="Description" name="description" />
-            <FormInput label="Price" name="price" type="number" required />
-            <FormInput label="SKU" name="sku" required />
+            <FormSelectField
+              label="Product"
+              name="productId"
+              options={productOptions}
+              required
+            />
+
+            <FormSelectField
+              label="Promotion Type"
+              name="type"
+              options={promotionOptions}
+              required
+            />
             <FormInput
-              label="Stock"
-              name="inventory.stock"
-              type="number"
+              label="Discount Percentage"
+              name="discountPercentage"
               required
             />
-            <FormSelectField
-              label="Category"
-              name="categoryId"
-              options={categoryOptions}
-              required
-            />
-            <FormSelectField
-              name="status"
-              label="status"
-              options={[
-                { value: "ACTIVE", label: "ACTIVE" },
-                { value: "INACTIVE", label: "INACTIVE" },
-                { value: "DRAFT", label: "DRAFT" },
-              ]}
-            />
-            {!selectedProduct && (
-              <FormFileUpload
-                name="file"
-                label="Upload Product Image"
-                acceptedFileTypes={["image/jpeg", "image/png"]}
-                maxFileSize={5000000}
-              />
-            )}
             <Button
               type="submit"
               variant="contained"
@@ -420,7 +346,7 @@ const Product = () => {
             >
               {createLoading || updateLoading
                 ? "Processing..."
-                : selectedProduct
+                : selectedPromotion
                 ? "Update"
                 : "Create"}
             </Button>
@@ -433,7 +359,7 @@ const Product = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         title="Confirm Deletion"
       >
-        <Typography>Are you sure you want to delete this product?</Typography>
+        <Typography>Are you sure you want to delete this promotion?</Typography>
         <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
           <Button
             variant="contained"
@@ -459,4 +385,4 @@ const Product = () => {
   );
 };
 
-export default Product;
+export default Promotion;

@@ -86,11 +86,6 @@ const User = () => {
     { id: "name", label: "Name" },
     { id: "email", label: "Email" },
     {
-      id: "profile.phone",
-      label: "Phone",
-      format: (_: any, row?: User) => row?.profile.phone || "-",
-    },
-    {
       id: "role",
       label: "Role",
       format: (value: string) =>
