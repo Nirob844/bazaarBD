@@ -1,6 +1,8 @@
 export interface Promotion {
+  id: string;
   type: string;
   discountPercentage: string;
+  productId?: string;
 }
 
 export interface ImageUrl {

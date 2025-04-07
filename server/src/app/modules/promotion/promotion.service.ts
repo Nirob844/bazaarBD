@@ -5,6 +5,14 @@ import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
 const insertIntoDB = async (data: Promotion): Promise<Promotion> => {
+  const existingPromotion = await prisma.promotion.findFirst({
+    where: {
+      productId: data.productId,
+    },
+  });
+  if (existingPromotion) {
+    throw new Error('Promotion for this product already exists');
+  }
   const result = await prisma.promotion.create({
     data,
   });
@@ -32,6 +40,25 @@ const getAllFromDB = async (
         : {
             createdAt: 'desc',
           },
+    include: {
+      product: {
+        select: {
+          name: true,
+          price: true,
+          inventory: {
+            select: {
+              stock: true,
+            },
+          },
+          imageUrls: {
+            select: {
+              url: true,
+              altText: true,
+            },
+          },
+        },
+      },
+    },
   });
   const total = await prisma.promotion.count({
     where: whereConditions,
