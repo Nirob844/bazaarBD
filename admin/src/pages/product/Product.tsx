@@ -3,6 +3,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Avatar,
   Box,
@@ -16,8 +17,8 @@ import {
 } from "@mui/material";
 import { ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import Form from "../../components/forms/Form";
-import FormFileUpload from "../../components/forms/FormFileUpload";
 import FormInput from "../../components/forms/FormInput";
 import FormSelectField from "../../components/forms/FormSelectField";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
@@ -55,10 +56,10 @@ interface Product {
   price: string;
   sku: string;
   status: string;
-  inventory: Inventory;
+  inventory?: Inventory;
   categoryId: string;
   userId: string;
-  imageUrls: { url: string }[];
+  imageUrls?: { url: string }[];
   promotions: Promotion[];
   createdAt: string;
   category?: {
@@ -71,7 +72,7 @@ interface FormValues {
   description: string;
   price: string;
   sku: string;
-  status: string;
+  status?: string;
   inventory: {
     stock: number;
   };
@@ -94,9 +95,10 @@ const Product = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
-
+  const navigate = useNavigate();
   const currentUser = useAppSelector(selectCurrentUser);
   const userId = currentUser?.userId || "";
+  const role = currentUser?.role || "";
 
   const query = {
     limit: size,
@@ -172,7 +174,7 @@ const Product = () => {
     {
       id: "inventory.stock",
       label: "Stock",
-      format: (_: any, row?: Product) => row?.inventory.stock || 0,
+      format: (_: any, row?: Product) => row?.inventory?.stock || 0,
     },
     { id: "status", label: "Status" },
     {
@@ -185,6 +187,16 @@ const Product = () => {
       label: "Actions",
       format: (_: any, row?: Product) => (
         <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            color="secondary"
+            startIcon={<VisibilityIcon />}
+            onClick={() =>
+              row?.id && navigate(`/${role.toLowerCase()}/product/${row.id}`)
+            }
+          >
+            View
+          </Button>
           <Button
             size="small"
             startIcon={<EditIcon />}
@@ -216,18 +228,19 @@ const Product = () => {
   };
 
   const onSubmit = async (data: FormValues) => {
+    data.inventory.stock = Number(data.inventory.stock);
     try {
       const productData = {
         name: data.name,
         description: data.description || "",
         price: data.price,
         sku: data.sku,
-        status: data.status || "active",
-        categoryId: data.categoryId,
-        userId,
+        status: data.status || "ACTIVE",
         inventory: {
           stock: Number(data.inventory.stock) || 0,
         },
+        categoryId: data.categoryId,
+        userId,
       };
 
       if (selectedProduct) {
@@ -241,13 +254,7 @@ const Product = () => {
           toast.error("Failed to update product");
         }
       } else {
-        const formData = new FormData();
-        if (data.file) {
-          formData.append("file", data.file);
-        }
-        formData.append("data", JSON.stringify(productData));
-
-        const res = await createProduct(formData);
+        const res = await createProduct(data);
         if ("data" in res) {
           toast.success("Product created successfully");
         } else {
@@ -299,7 +306,7 @@ const Product = () => {
     description: selectedProduct?.description || "",
     price: selectedProduct?.price || "",
     sku: selectedProduct?.sku || "",
-    status: selectedProduct?.status || "active",
+    status: selectedProduct?.status || "ACTIVE",
     inventory: {
       stock: selectedProduct?.inventory?.stock || 0,
     },
@@ -383,29 +390,24 @@ const Product = () => {
               type="number"
               required
             />
+            {selectedProduct && (
+              <FormSelectField
+                label="Status"
+                name="status"
+                options={[
+                  { value: "ACTIVE", label: "Active" },
+                  { value: "INACTIVE", label: "Inactive" },
+                  { value: "OUT_OF_STOCK", label: "Out of stock" },
+                ]}
+                required
+              />
+            )}
             <FormSelectField
               label="Category"
               name="categoryId"
               options={categoryOptions}
               required
             />
-            <FormSelectField
-              name="status"
-              label="status"
-              options={[
-                { value: "ACTIVE", label: "ACTIVE" },
-                { value: "INACTIVE", label: "INACTIVE" },
-                { value: "DRAFT", label: "DRAFT" },
-              ]}
-            />
-            {!selectedProduct && (
-              <FormFileUpload
-                name="file"
-                label="Upload Product Image"
-                acceptedFileTypes={["image/jpeg", "image/png"]}
-                maxFileSize={5000000}
-              />
-            )}
             <Button
               type="submit"
               variant="contained"

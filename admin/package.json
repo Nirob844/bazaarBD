@@ -24,6 +24,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.55.0",
     "react-hot-toast": "^2.5.2",
+    "react-material-ui-carousel": "^3.4.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "6",
     "recharts": "^2.15.2",
