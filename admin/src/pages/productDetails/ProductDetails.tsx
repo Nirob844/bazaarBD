@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import InventoryIcon from "@mui/icons-material/Inventory";
 import {
   Avatar,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Grid,
@@ -15,9 +19,21 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
 import Carousel from "react-material-ui-carousel";
 import { useParams } from "react-router-dom";
-import { useGetSingleProductQuery } from "../../redux/api/productApi";
+import { useUpdateInventoryMutation } from "../../redux/api/inventoryApi";
+import {
+  useGetSingleProductQuery,
+  useUploadProductImageMutation,
+} from "../../redux/api/productApi";
+
+import { SubmitHandler } from "react-hook-form";
+import toast from "react-hot-toast";
+import Form from "../../components/forms/Form";
+import FormFileUpload from "../../components/forms/FormFileUpload";
+import FormInput from "../../components/forms/FormInput";
+import ModalComponent from "../../components/ui/ModalComponent";
 
 interface InventoryHistoryEntry {
   action: string;
@@ -36,16 +52,24 @@ interface Review {
   comment: string;
 }
 
+interface InventoryUpdateInput {
+  stock: number;
+}
+
 const ProductDetails = () => {
   const { id } = useParams();
 
   const { data: product, isLoading } = useGetSingleProductQuery(id);
+  const [uploadProductImage, { isLoading: imageLoading }] =
+    useUploadProductImageMutation();
+  const [updateInventory] = useUpdateInventoryMutation();
+
+  const [openImageModal, setOpenImageModal] = useState(false);
+  const [openInventoryModal, setOpenInventoryModal] = useState(false);
 
   if (isLoading) return <CircularProgress />;
-
   if (!product) return <Typography>No product found.</Typography>;
-  console.log("product", product);
-
+  console.log(product.data.imageUrls);
   const {
     name,
     description,
@@ -67,36 +91,66 @@ const ProductDetails = () => {
       ? (parseFloat(price) * (1 - parseFloat(discount) / 100)).toFixed(2)
       : null;
 
+  // Image Upload Submit
+  const handleImageUpload: SubmitHandler<any> = async (data) => {
+    const formData = new FormData();
+    formData.append("file", data.file);
+    formData.append("data", JSON.stringify({ productId: id }));
+    await uploadProductImage(formData);
+    setOpenImageModal(false);
+  };
+
+  // Inventory Update Submit
+  const handleInventoryUpdate: SubmitHandler<InventoryUpdateInput> = async (
+    data
+  ) => {
+    const res = await updateInventory({
+      id: inventory.id,
+      data: { stock: Number(data.stock) },
+    });
+    if ("data" in res) {
+      toast.success("Inventory updated successfully");
+    } else {
+      toast.error("Failed to update inventory");
+    }
+    setOpenInventoryModal(false);
+  };
+
   return (
     <Box p={3}>
       <Grid container spacing={4}>
         {/* Images */}
         <Grid item xs={12} md={6}>
           <Carousel navButtonsAlwaysVisible>
-            {imageUrls &&
-              imageUrls.map(
-                (img: { url: string; altText: string }, idx: number) => (
-                  <Box
-                    key={idx}
-                    component="img"
-                    src={img.url}
-                    alt={img.altText}
-                    sx={{
-                      width: "100%",
-                      height: 500,
-                      objectFit: "cover",
-                      borderRadius: 2,
-                    }}
-                  />
-                )
-              )}
+            {imageUrls?.map((img: any) => (
+              <Box
+                key={img.id}
+                component="img"
+                src={img.url}
+                alt={img.altText}
+                sx={{
+                  width: "100%",
+                  height: 500,
+                  objectFit: "cover",
+                  borderRadius: 2,
+                }}
+              />
+            ))}
           </Carousel>
+          <Button
+            variant="outlined"
+            startIcon={<AddPhotoAlternateIcon />}
+            fullWidth
+            sx={{ mt: 2 }}
+            onClick={() => setOpenImageModal(true)}
+          >
+            Upload Product Image
+          </Button>
         </Grid>
 
         {/* Product Info */}
         <Grid item xs={12} md={6}>
           <Typography variant="h4">{name}</Typography>
-
           <Stack direction="row" spacing={2} alignItems="center" mt={1}>
             <Typography variant="h6" color="primary">
               ${discountedPrice || parseFloat(price).toFixed(2)}
@@ -105,7 +159,6 @@ const ProductDetails = () => {
               <>
                 <Typography
                   variant="body1"
-                  color="text.secondary"
                   sx={{ textDecoration: "line-through" }}
                 >
                   ${parseFloat(price).toFixed(2)}
@@ -129,6 +182,16 @@ const ProductDetails = () => {
               Created At: {new Date(createdAt).toLocaleString()}
             </Typography>
           </Stack>
+
+          <Button
+            variant="outlined"
+            startIcon={<InventoryIcon />}
+            fullWidth
+            sx={{ mt: 3 }}
+            onClick={() => setOpenInventoryModal(true)}
+          >
+            Update Inventory
+          </Button>
         </Grid>
       </Grid>
 
@@ -193,6 +256,40 @@ const ProductDetails = () => {
           <Typography>No reviews yet.</Typography>
         )}
       </Box>
+
+      {/* Image Upload Modal */}
+      <ModalComponent
+        open={openImageModal}
+        onClose={() => setOpenImageModal(false)}
+        title="Upload Product Image"
+      >
+        <Form submitHandler={handleImageUpload}>
+          <FormFileUpload name="file" label="Product Image" />
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            sx={{ mt: 2 }}
+            disabled={imageLoading}
+          >
+            {imageLoading ? "Uploading..." : "Upload"}
+          </Button>
+        </Form>
+      </ModalComponent>
+
+      {/* Inventory Update Modal */}
+      <ModalComponent
+        open={openInventoryModal}
+        onClose={() => setOpenInventoryModal(false)}
+        title="Update Inventory"
+      >
+        <Form submitHandler={handleInventoryUpdate}>
+          <FormInput name="stock" type="number" label="Quantity" />
+          <Button fullWidth type="submit" variant="contained" sx={{ mt: 2 }}>
+            Update Stock
+          </Button>
+        </Form>
+      </ModalComponent>
     </Box>
   );
 };

@@ -3,6 +3,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Avatar,
   Box,
@@ -16,6 +17,7 @@ import {
 } from "@mui/material";
 import { ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import Form from "../../components/forms/Form";
 import FormInput from "../../components/forms/FormInput";
 import FormSelectField from "../../components/forms/FormSelectField";
@@ -93,9 +95,10 @@ const Product = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
-
+  const navigate = useNavigate();
   const currentUser = useAppSelector(selectCurrentUser);
   const userId = currentUser?.userId || "";
+  const role = currentUser?.role || "";
 
   const query = {
     limit: size,
@@ -184,6 +187,16 @@ const Product = () => {
       label: "Actions",
       format: (_: any, row?: Product) => (
         <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            color="secondary"
+            startIcon={<VisibilityIcon />}
+            onClick={() =>
+              row?.id && navigate(`/${role.toLowerCase()}/product/${row.id}`)
+            }
+          >
+            View
+          </Button>
           <Button
             size="small"
             startIcon={<EditIcon />}
