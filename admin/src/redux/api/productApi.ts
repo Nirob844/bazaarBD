@@ -5,11 +5,19 @@ const productApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     //? product create
     createProduct: build.mutation({
-      query: (formData) => ({
+      query: (data) => ({
         url: "/products",
         method: "POST",
-        data: formData,
-        contentType: "multipart/form-data",
+        data,
+      }),
+      invalidatesTags: [tagTypes.product],
+    }),
+    //? product image
+    uploadProductImage: build.mutation({
+      query: (data) => ({
+        url: "/products/product_images",
+        method: "POST",
+        data,
       }),
       invalidatesTags: [tagTypes.product],
     }),
@@ -54,6 +62,7 @@ const productApi = baseApi.injectEndpoints({
 
 export const {
   useCreateProductMutation,
+  useUploadProductImageMutation,
   useGetProductQuery,
   useGetSingleProductQuery,
   useUpdateProductMutation,
