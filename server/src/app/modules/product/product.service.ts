@@ -320,7 +320,34 @@ const deleteByIdFromDB = async (id: string): Promise<Product> => {
       productId: id,
     },
   });
+
+  await prisma.promotion.deleteMany({
+    where: {
+      productId: id,
+    },
+  });
+
+  await prisma.inventoryHistory.deleteMany({
+    where: {
+      inventory: {
+        productId: id,
+      },
+    },
+  });
+
   await prisma.inventory.deleteMany({
+    where: {
+      productId: id,
+    },
+  });
+
+  await prisma.productImage.deleteMany({
+    where: {
+      productId: id,
+    },
+  });
+
+  await prisma.review.deleteMany({
     where: {
       productId: id,
     },

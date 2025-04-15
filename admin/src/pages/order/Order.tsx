@@ -240,7 +240,7 @@ const Order = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Orders
+        Orders Management
       </Typography>
 
       <Box

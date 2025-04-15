@@ -319,7 +319,7 @@ const Product = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Products
+        Products Management
       </Typography>
 
       <Box

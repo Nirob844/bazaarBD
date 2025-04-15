@@ -38,11 +38,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "dashboard" },
-    { text: "User Management", icon: <GroupIcon />, path: "user" },
     { text: "Category", icon: <CategoryIcon />, path: "category" },
     { text: "Product", icon: <InventoryIcon />, path: "product" },
     { text: "Promotion", icon: <LocalOfferIcon />, path: "promotion" },
     { text: "Order", icon: <LocalMallIcon />, path: "order" },
+    { text: "User", icon: <GroupIcon />, path: "user" },
   ];
 
   const isActive = (path: string) =>

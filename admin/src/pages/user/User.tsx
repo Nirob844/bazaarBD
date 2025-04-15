@@ -215,7 +215,7 @@ const User = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Categories
+        Users Management
       </Typography>
 
       <Box
