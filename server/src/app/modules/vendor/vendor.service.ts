@@ -1,15 +1,15 @@
-import { Customer, Prisma } from '@prisma/client';
+import { Prisma, Vendor } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
-import { customerSearchableFields } from './customer.constants';
-import { ICustomerFilterRequest } from './customer.interface';
+import { vendorSearchableFields } from './vendor.constants';
+import { IVendorFilterRequest } from './vendor.interface';
 
-const getAllCustomers = async (
-  filters: ICustomerFilterRequest,
+const getAllVendors = async (
+  filters: IVendorFilterRequest,
   options: IPaginationOptions
-): Promise<IGenericResponse<Customer[]>> => {
+): Promise<IGenericResponse<Vendor[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
 
@@ -17,7 +17,7 @@ const getAllCustomers = async (
 
   if (searchTerm) {
     andConditions.push({
-      OR: customerSearchableFields.map(field => ({
+      OR: vendorSearchableFields.map(field => ({
         [field]: {
           contains: searchTerm,
           mode: 'insensitive',
@@ -36,10 +36,10 @@ const getAllCustomers = async (
     });
   }
 
-  const whereConditions: Prisma.CustomerWhereInput =
+  const whereConditions: Prisma.VendorWhereInput =
     andConditions.length > 0 ? { AND: andConditions } : {};
 
-  const result = await prisma.customer.findMany({
+  const result = await prisma.vendor.findMany({
     where: whereConditions,
     skip,
     take: limit,
@@ -50,10 +50,11 @@ const getAllCustomers = async (
             createdAt: 'desc',
           },
     include: {
-      addresses: true,
+      shops: true,
+      bankAccounts: true,
     },
   });
-  const total = await prisma.customer.count({
+  const total = await prisma.vendor.count({
     where: whereConditions,
   });
 
@@ -67,43 +68,36 @@ const getAllCustomers = async (
   };
 };
 
-const getSingleCustomer = async (id: string): Promise<Customer | null> => {
-  const result = await prisma.customer.findUnique({
+const getSingleVendor = async (id: string): Promise<Vendor | null> => {
+  const result = await prisma.vendor.findUnique({
     where: {
       id,
     },
     include: {
-      addresses: true,
-      cart: true,
-      orders: true,
-      reviews: true,
+      shops: true,
+      bankAccounts: true,
     },
   });
 
   return result;
 };
 
-const getCustomerProfile = async (id: string): Promise<Customer | null> => {
-  const result = await prisma.customer.findFirst({
+const getVendorProfile = async (id: string): Promise<Vendor | null> => {
+  const result = await prisma.vendor.findFirst({
     where: {
       userId: id,
     },
     include: {
-      addresses: true,
-      cart: true,
-      orders: true,
-      reviews: true,
+      shops: true,
+      bankAccounts: true,
     },
   });
 
   return result;
 };
 
-const updateCustomer = async (
-  id: string,
-  payload: Partial<Customer>
-): Promise<Customer> => {
-  const result = await prisma.customer.update({
+const updateVendor = async (id: string, payload: any): Promise<Vendor> => {
+  const result = await prisma.vendor.update({
     where: {
       id,
     },
@@ -112,8 +106,8 @@ const updateCustomer = async (
   return result;
 };
 
-const deleteCustomer = async (id: string): Promise<Customer> => {
-  const result = await prisma.customer.delete({
+const deleteVendor = async (id: string): Promise<Vendor> => {
+  const result = await prisma.vendor.delete({
     where: {
       id,
     },
@@ -121,10 +115,10 @@ const deleteCustomer = async (id: string): Promise<Customer> => {
   return result;
 };
 
-export const CustomerService = {
-  getAllCustomers,
-  getSingleCustomer,
-  getCustomerProfile,
-  updateCustomer,
-  deleteCustomer,
+export const VendorService = {
+  getAllVendors,
+  getSingleVendor,
+  getVendorProfile,
+  updateVendor,
+  deleteVendor,
 };

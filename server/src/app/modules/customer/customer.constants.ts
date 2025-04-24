@@ -1,4 +1,4 @@
-export const customerFilterableFields: string[] = ['searchTerm', 'role'];
+export const customerFilterableFields: string[] = ['searchTerm'];
 
 export const customerSearchableFields: string[] = [
   'email',
