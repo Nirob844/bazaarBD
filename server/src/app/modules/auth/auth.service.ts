@@ -34,22 +34,6 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
       },
     });
 
-    if (role === 'CUSTOMER') {
-      if (!data.firstName || !data.lastName) {
-        throw new Error('Customer must provide firstName and lastName');
-      }
-
-      await tx.customer.create({
-        data: {
-          userId: user.id,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          avatar: data.avatar,
-        },
-      });
-    }
-
     if (role === 'VENDOR') {
       if (!data.businessName || !data.businessEmail || !data.businessPhone) {
         throw new Error(
@@ -67,16 +51,27 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
           verificationDocuments: data.verificationDocuments,
         },
       });
-    }
-
-    if (role === 'ADMIN') {
+    } else if (role === 'ADMIN') {
       await tx.admin.create({
         data: {
           userId: user.id,
         },
       });
-    }
+    } else {
+      if (!data.firstName || !data.lastName) {
+        throw new Error('Customer must provide firstName and lastName');
+      }
 
+      await tx.customer.create({
+        data: {
+          userId: user.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          avatar: data.avatar,
+        },
+      });
+    }
     return user;
   });
 };
