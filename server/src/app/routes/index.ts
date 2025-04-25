@@ -10,7 +10,9 @@ import { ProductImageRoutes } from '../modules/productImage/productImage.routes'
 import { ProfileRoutes } from '../modules/profile/profile.routes';
 import { PromotionRoutes } from '../modules/promotion/promotion.routes';
 import { ReviewRoutes } from '../modules/review/review.routes';
+import { ShopRoutes } from '../modules/shop/shop.routes';
 import { UserRoutes } from '../modules/user/user.routes';
+import { VendorRoutes } from '../modules/vendor/vendor.routes';
 
 const router = express.Router();
 
@@ -29,12 +31,20 @@ const moduleRoutes = [
     route: CustomerRoutes,
   },
   {
+    path: '/vendors',
+    route: VendorRoutes,
+  },
+  {
     path: '/profile',
     route: ProfileRoutes,
   },
   {
     path: '/categories',
     route: CategoryRoutes,
+  },
+  {
+    path: '/shops',
+    route: ShopRoutes,
   },
   {
     path: '/products',

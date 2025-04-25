@@ -36,12 +36,12 @@ const getAllFromDB = async (
     where: whereConditions,
     skip,
     take: limit,
-    // orderBy:
-    //   options.sortBy && options.sortOrder
-    //     ? { [options.sortBy]: options.sortOrder }
-    //     : {
-    //         createdAt: 'desc',
-    //       },
+    orderBy:
+      options.sortBy && options.sortOrder
+        ? { [options.sortBy]: options.sortOrder }
+        : {
+            createdAt: 'desc',
+          },
   });
   const total = await prisma.category.count({
     where: whereConditions,

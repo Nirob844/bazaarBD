@@ -73,10 +73,6 @@ const getSingleVendor = async (id: string): Promise<Vendor | null> => {
     where: {
       id,
     },
-    include: {
-      shops: true,
-      bankAccounts: true,
-    },
   });
 
   return result;
@@ -89,6 +85,8 @@ const getVendorProfile = async (id: string): Promise<Vendor | null> => {
     },
     include: {
       shops: true,
+      products: true,
+      analytics: true,
       bankAccounts: true,
     },
   });
