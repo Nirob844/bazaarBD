@@ -22,8 +22,8 @@ const insertIntoDB = async (
   if (existingSku) throw new Error('SKU must be unique!');
 
   // Check if Vendor exists
-  const userExists = await prisma.user.findUnique({
-    where: { id: productData.userId },
+  const userExists = await prisma.vendor.findUnique({
+    where: { id: productData.vendorId },
   });
 
   if (!userExists) throw new Error('User not found!');
@@ -67,16 +67,16 @@ const getAllFromDB = async (
   // Min price filtering
   if (minPrice !== undefined) {
     andConditions.push({
-      price: {
+      basePrice: {
         gte: Number(minPrice),
       },
     });
   }
 
-  // Max price filtering
+  // Max basePrice filtering
   if (maxPrice !== undefined) {
     andConditions.push({
-      price: {
+      basePrice: {
         lte: Number(maxPrice),
       },
     });
@@ -145,7 +145,7 @@ const getAllFromDB = async (
             createdAt: 'desc',
           },
     include: {
-      imageUrls: {
+      images: {
         select: {
           url: true,
           altText: true,
@@ -164,7 +164,7 @@ const getAllFromDB = async (
       promotions: {
         select: {
           type: true,
-          discountPercentage: true,
+          discountValue: true,
         },
       },
     },
@@ -201,7 +201,7 @@ const getAllPromotionProducts = async (
       createdAt: 'desc',
     },
     include: {
-      imageUrls: {
+      images: {
         select: {
           url: true,
           altText: true,
@@ -221,7 +221,7 @@ const getAllPromotionProducts = async (
         select: {
           id: true,
           type: true,
-          discountPercentage: true,
+          discountValue: true,
         },
       },
     },
@@ -249,12 +249,22 @@ const getDataById = async (id: string): Promise<Product | null> => {
   return prisma.product.findUnique({
     where: { id },
     include: {
-      imageUrls: true,
-      category: true,
-      user: {
+      images: {
+        select: {
+          url: true,
+          altText: true,
+        },
+      },
+      category: {
         select: {
           name: true,
-          email: true,
+          imageUrl: true,
+        },
+      },
+      vendor: {
+        select: {
+          businessName: true,
+          businessEmail: true,
         },
       },
       inventory: {
@@ -265,17 +275,33 @@ const getDataById = async (id: string): Promise<Product | null> => {
       promotions: {
         select: {
           type: true,
-          discountPercentage: true,
+          discountValue: true,
+        },
+      },
+      variants: {
+        select: {
+          name: true,
+        },
+      },
+      attributes: {
+        select: {
+          key: true,
+          value: true,
+        },
+      },
+      tags: {
+        select: {
+          name: true,
         },
       },
       reviews: {
         select: {
           rating: true,
           comment: true,
-          user: {
+          customer: {
             select: {
-              name: true,
-              email: true,
+              firstName: true,
+              avatar: true,
             },
           },
         },
@@ -300,8 +326,6 @@ const updateOneInDB = async (
     where: { id },
     data: payload,
     include: {
-      category: true,
-      user: true,
       inventory: true,
     },
   });
