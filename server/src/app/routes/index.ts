@@ -1,4 +1,5 @@
 import express from 'express';
+import { ProductAttributeRoutes } from '../modules/attribute/attribute.routes';
 import { AuthRoutes } from '../modules/auth/auth.routes';
 import { CartRoutes } from '../modules/cart/cart.routes';
 import { CategoryRoutes } from '../modules/category/category.routes';
@@ -11,7 +12,9 @@ import { ProfileRoutes } from '../modules/profile/profile.routes';
 import { PromotionRoutes } from '../modules/promotion/promotion.routes';
 import { ReviewRoutes } from '../modules/review/review.routes';
 import { ShopRoutes } from '../modules/shop/shop.routes';
+import { ProductTagRoutes } from '../modules/tag/tag.routes';
 import { UserRoutes } from '../modules/user/user.routes';
+import { ProductVariantRoutes } from '../modules/variannt/variant.routes';
 import { VendorRoutes } from '../modules/vendor/vendor.routes';
 
 const router = express.Router();
@@ -61,6 +64,18 @@ const moduleRoutes = [
   {
     path: '/promotions',
     route: PromotionRoutes,
+  },
+  {
+    path: '/attributes',
+    route: ProductAttributeRoutes,
+  },
+  {
+    path: '/variants',
+    route: ProductVariantRoutes,
+  },
+  {
+    path: '/tags',
+    route: ProductTagRoutes,
   },
   {
     path: '/reviews',

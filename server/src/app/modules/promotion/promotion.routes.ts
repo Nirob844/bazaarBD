@@ -7,15 +7,19 @@ const router = express.Router();
 
 router.get('/', PromotionController.getAllFromDB);
 router.get('/:id', PromotionController.getDataById);
-router.post('/', auth(ENUM_USER_ROLE.ADMIN), PromotionController.insertIntoDB);
+router.post(
+  '/',
+  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
+  PromotionController.insertIntoDB
+);
 router.patch(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN),
+  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
   PromotionController.updateOneInDB
 );
 router.delete(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN),
+  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
   PromotionController.deleteByIdFromDB
 );
 

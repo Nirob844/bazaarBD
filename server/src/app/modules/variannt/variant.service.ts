@@ -1,20 +1,23 @@
-import { Prisma, Promotion } from '@prisma/client';
+import { Prisma, ProductVariant } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
-const insertIntoDB = async (data: Promotion): Promise<Promotion> => {
-  const existingPromotion = await prisma.promotion.findFirst({
-    where: {
-      productId: data.productId,
-    },
-  });
-  if (existingPromotion) {
-    throw new Error('Promotion for this product already exists');
-  }
-  const result = await prisma.promotion.create({
+const insertIntoDB = async (data: ProductVariant): Promise<ProductVariant> => {
+  const result = await prisma.productVariant.create({
     data,
+  });
+
+  return result;
+};
+
+const insertManyIntoDB = async (
+  data: ProductVariant[]
+): Promise<{ count: number }> => {
+  const result = await prisma.productVariant.createMany({
+    data,
+    skipDuplicates: true,
   });
 
   return result;
@@ -22,24 +25,24 @@ const insertIntoDB = async (data: Promotion): Promise<Promotion> => {
 
 const getAllFromDB = async (
   options: IPaginationOptions
-): Promise<IGenericResponse<Promotion[]>> => {
+): Promise<IGenericResponse<ProductVariant[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
-  const andConditions: Prisma.PromotionWhereInput[] = [];
+  const andConditions: Prisma.ProductVariantWhereInput[] = [];
 
-  const whereConditions: Prisma.PromotionWhereInput =
+  const whereConditions: Prisma.ProductVariantWhereInput =
     andConditions.length > 0 ? { AND: andConditions } : {};
 
-  const result = await prisma.promotion.findMany({
+  const result = await prisma.productVariant.findMany({
     where: whereConditions,
     skip,
     take: limit,
-    orderBy:
-      options.sortBy && options.sortOrder
-        ? { [options.sortBy]: options.sortOrder }
-        : {
-            createdAt: 'desc',
-          },
+    // orderBy:
+    //   options.sortBy && options.sortOrder
+    //     ? { [options.sortBy]: options.sortOrder }
+    //     : {
+    //         createdAt: 'desc',
+    //       },
     include: {
       product: {
         select: {
@@ -60,7 +63,7 @@ const getAllFromDB = async (
       },
     },
   });
-  const total = await prisma.promotion.count({
+  const total = await prisma.productVariant.count({
     where: whereConditions,
   });
 
@@ -74,8 +77,8 @@ const getAllFromDB = async (
   };
 };
 
-const getDataById = async (id: string): Promise<Promotion | null> => {
-  const result = await prisma.promotion.findUnique({
+const getDataById = async (id: string): Promise<ProductVariant | null> => {
+  const result = await prisma.productVariant.findUnique({
     where: {
       id,
     },
@@ -108,9 +111,9 @@ const getDataById = async (id: string): Promise<Promotion | null> => {
 
 const updateOneInDB = async (
   id: string,
-  payload: Partial<Promotion>
-): Promise<Promotion> => {
-  const result = await prisma.promotion.update({
+  payload: Partial<ProductVariant>
+): Promise<ProductVariant> => {
+  const result = await prisma.productVariant.update({
     where: {
       id,
     },
@@ -119,8 +122,8 @@ const updateOneInDB = async (
   return result;
 };
 
-const deleteByIdFromDB = async (id: string): Promise<Promotion> => {
-  const result = await prisma.promotion.delete({
+const deleteByIdFromDB = async (id: string): Promise<ProductVariant> => {
+  const result = await prisma.productVariant.delete({
     where: {
       id,
     },
@@ -128,8 +131,9 @@ const deleteByIdFromDB = async (id: string): Promise<Promotion> => {
   return result;
 };
 
-export const PromotionService = {
+export const ProductVariantService = {
   insertIntoDB,
+  insertManyIntoDB,
   getAllFromDB,
   getDataById,
   updateOneInDB,
