@@ -55,6 +55,42 @@ const getDataById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getProductPromotions = catchAsync(async (req: Request, res: Response) => {
+  const productId = req.params.id;
+  const result = await ProductService.getProductPromotions(productId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product promotions fetched successfully!',
+    data: result,
+  });
+});
+
+const getProductAttributes = catchAsync(async (req: Request, res: Response) => {
+  const productId = req.params.id;
+
+  const result = await ProductService.getProductAttributes(productId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product attributes fetched successfully!',
+    data: result,
+  });
+});
+const getProductVariants = catchAsync(async (req: Request, res: Response) => {
+  const productId = req.params.id;
+
+  const result = await ProductService.getProductVariants(productId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product variants fetched successfully!',
+    data: result,
+  });
+});
+
 const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const result = await ProductService.updateOneInDB(id, req.body);
@@ -82,6 +118,9 @@ export const ProductController = {
   getAllFromDB,
   getAllPromotionProducts,
   getDataById,
+  getProductPromotions,
+  getProductAttributes,
+  getProductVariants,
   updateOneInDB,
   deleteByIdFromDB,
 };

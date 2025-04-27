@@ -310,6 +310,45 @@ const getDataById = async (id: string): Promise<Product | null> => {
   });
 };
 
+const getProductPromotions = async (productId: string) => {
+  const result = await prisma.promotion.findMany({
+    where: {
+      productId: productId,
+    },
+    include: {
+      product: true,
+    },
+  });
+
+  return result;
+};
+
+const getProductAttributes = async (productId: string) => {
+  const result = await prisma.productAttribute.findMany({
+    where: {
+      productId: productId,
+    },
+    include: {
+      product: true,
+    },
+  });
+
+  return result;
+};
+
+const getProductVariants = async (productId: string) => {
+  const result = await prisma.productVariant.findMany({
+    where: {
+      productId: productId,
+    },
+    include: {
+      product: true,
+    },
+  });
+
+  return result;
+};
+
 const updateOneInDB = async (
   id: string,
   payload: Partial<Product>
@@ -385,6 +424,9 @@ const deleteByIdFromDB = async (id: string): Promise<Product> => {
 export const ProductService = {
   insertIntoDB,
   getAllFromDB,
+  getProductPromotions,
+  getProductAttributes,
+  getProductVariants,
   getAllPromotionProducts,
   getDataById,
   updateOneInDB,
