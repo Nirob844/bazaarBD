@@ -5,9 +5,28 @@ import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
 const cartToOrder = async (userId: string): Promise<Order> => {
-  // Fetch the user's cart with items
-  const cart = await prisma.cart.findUnique({
+  const customer = await prisma.customer.findUnique({
     where: { userId },
+  });
+
+  if (!customer) {
+    throw new Error('customer not found');
+  }
+
+  const customerId = customer.id;
+
+  const address = await prisma.address.findFirst({
+    where: { customerId },
+  });
+
+  if (!address) {
+    throw new Error('address not found');
+  }
+
+  const addressId = address.id;
+
+  const cart = await prisma.cart.findUnique({
+    where: { customerId },
     include: {
       items: {
         include: {
@@ -15,7 +34,7 @@ const cartToOrder = async (userId: string): Promise<Order> => {
             include: {
               promotions: {
                 select: {
-                  discountPercentage: true,
+                  discountValue: true,
                   type: true,
                 },
               },
@@ -30,74 +49,58 @@ const cartToOrder = async (userId: string): Promise<Order> => {
     throw new Error('Cart is empty or not found.');
   }
 
-  // 👉 Calculate the total price with discounts applied
   const totalAmount = cart.items.reduce((sum, item) => {
     const product = item.product;
-
-    // Step 1: Base price
-    const basePrice = Number(product.price);
-
-    // Step 2: Get product's discount percentage (optional)
-    const productDiscount = product.discountPercentage
-      ? Number(product.discountPercentage)
-      : 0;
-
-    // Step 3: Get the highest promotion discount (if any)
+    const basePrice = Number(product.basePrice);
     const promotionDiscounts = product.promotions.map(p =>
-      Number(p.discountPercentage)
+      Number(p.discountValue)
     );
     const maxPromotionDiscount = promotionDiscounts.length
       ? Math.max(...promotionDiscounts)
       : 0;
-
-    // Step 4: Choose the maximum discount
-    const effectiveDiscountPercentage = Math.max(
-      productDiscount,
-      maxPromotionDiscount
-    );
-
-    // Step 5: Calculate the discounted price
     const discountedPrice =
-      basePrice - (basePrice * effectiveDiscountPercentage) / 100;
-
-    // Step 6: Add to the total sum (quantity * discounted price)
+      basePrice - (basePrice * maxPromotionDiscount) / 100;
     return sum + item.quantity * discountedPrice;
   }, 0);
 
+  const orderNumber = `ORD-${new Date()
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
   return prisma.$transaction(async tx => {
-    // Create the order with items
     const order = await tx.order.create({
       data: {
-        userId,
+        customerId,
+        addressId,
+        orderNumber,
+        subtotal: totalAmount,
+        shipping: 0,
+        tax: 0,
+        discount: 0,
         total: totalAmount,
         status: 'PENDING',
+        paymentStatus: 'PENDING',
+        shippingStatus: 'PENDING',
         items: {
           create: cart.items.map(item => {
             const product = item.product;
-            const basePrice = Number(product.price);
-            const productDiscount = product.discountPercentage
-              ? Number(product.discountPercentage)
-              : 0;
+            const basePrice = Number(product.basePrice);
 
             const promotionDiscounts = product.promotions.map(p =>
-              Number(p.discountPercentage)
+              Number(p.discountValue)
             );
             const maxPromotionDiscount = promotionDiscounts.length
               ? Math.max(...promotionDiscounts)
               : 0;
 
-            const effectiveDiscountPercentage = Math.max(
-              productDiscount,
-              maxPromotionDiscount
-            );
-
             const discountedPrice =
-              basePrice - (basePrice * effectiveDiscountPercentage) / 100;
+              basePrice - (basePrice * maxPromotionDiscount) / 100;
 
             return {
               productId: item.productId,
               quantity: item.quantity,
-              unitPrice: discountedPrice, // Save discounted unit price here!
+              price: discountedPrice,
             };
           }),
         },
@@ -107,43 +110,6 @@ const cartToOrder = async (userId: string): Promise<Order> => {
       },
     });
 
-    // Update inventory stock
-    for (const item of cart.items) {
-      const inventory = await tx.inventory.findUnique({
-        where: { productId: item.productId },
-      });
-
-      if (!inventory) {
-        throw new Error(
-          `Inventory not found for product ID: ${item.productId}`
-        );
-      }
-
-      if (inventory.stock < item.quantity) {
-        throw new Error(
-          `Insufficient stock for product ID: ${item.productId}. Available: ${inventory.stock}, Required: ${item.quantity}`
-        );
-      }
-
-      await tx.inventory.update({
-        where: { productId: item.productId },
-        data: {
-          stock: {
-            decrement: item.quantity,
-          },
-          history: {
-            create: {
-              action: 'OUT',
-              quantityChange: item.quantity,
-              previousStock: inventory.stock,
-              newStock: inventory.stock - item.quantity,
-            },
-          },
-        },
-      });
-    }
-
-    // Clear cart
     await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
@@ -156,10 +122,20 @@ const getUserOrders = async (
   userId: string,
   options: IPaginationOptions
 ): Promise<IGenericResponse<Order[]>> => {
+  const customer = await prisma.customer.findUnique({
+    where: { userId },
+  });
+
+  if (!customer) {
+    throw new Error('customer not found');
+  }
+
+  const customerId = customer.id;
+
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
   const whereConditions: Prisma.OrderWhereInput = {
-    userId,
+    customerId,
   };
 
   const result = await prisma.order.findMany({
@@ -175,7 +151,7 @@ const getUserOrders = async (
         include: {
           product: {
             include: {
-              imageUrls: {
+              images: {
                 select: {
                   url: true,
                   altText: true,
@@ -184,7 +160,7 @@ const getUserOrders = async (
               promotions: {
                 select: {
                   type: true,
-                  discountPercentage: true,
+                  discountValue: true,
                 },
               },
             },
@@ -280,14 +256,66 @@ const updateOrderStatus = async (
   status: OrderStatus
 ): Promise<Order> => {
   console.log('updateOrderStatus', id, status);
+
   const existingOrder = await prisma.order.findUnique({
     where: { id },
+    include: {
+      items: true, // 🛒 Need order items to update inventory later
+    },
   });
 
   if (!existingOrder) {
     throw new Error('Order not found!');
   }
 
+  // If updating to CONFIRMED, adjust inventory
+  if (status === OrderStatus.COMPLETED) {
+    await prisma.$transaction(async tx => {
+      for (const item of existingOrder.items) {
+        const inventory = await tx.inventory.findUnique({
+          where: { productId: item.productId },
+        });
+
+        if (!inventory) {
+          throw new Error(
+            `Inventory not found for product ID: ${item.productId}`
+          );
+        }
+
+        if (inventory.stock < item.quantity) {
+          throw new Error(
+            `Insufficient stock for product ID: ${item.productId}. Available: ${inventory.stock}, Required: ${item.quantity}`
+          );
+        }
+
+        await tx.inventory.update({
+          where: { productId: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+            history: {
+              create: {
+                action: 'SALE',
+                quantityChange: item.quantity,
+                previousStock: inventory.stock,
+                newStock: inventory.stock - item.quantity,
+              },
+            },
+          },
+        });
+      }
+
+      // Then update the order status
+      await tx.order.update({
+        where: { id },
+        data: { status },
+      });
+    });
+
+    // Return the updated order after transaction
+    return (await prisma.order.findUnique({ where: { id } })) as Order;
+  }
+
+  // If updating to anything other than CONFIRMED, just update status
   return prisma.order.update({
     where: { id },
     data: { status },
