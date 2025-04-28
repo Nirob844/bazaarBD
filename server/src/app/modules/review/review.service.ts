@@ -53,7 +53,7 @@ const getDataById = async (id: string): Promise<Review | null> => {
       id,
     },
     include: {
-      user: true,
+      customer: true,
       product: true,
     },
   });

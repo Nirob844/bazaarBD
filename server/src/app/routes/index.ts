@@ -1,4 +1,6 @@
 import express from 'express';
+import { AddressRoutes } from '../modules/address/address.routes';
+import { AdminAnalyticsRoutes } from '../modules/adminAnalytics/adminAnalytics.routes';
 import { ProductAttributeRoutes } from '../modules/attribute/attribute.routes';
 import { AuthRoutes } from '../modules/auth/auth.routes';
 import { CartRoutes } from '../modules/cart/cart.routes';
@@ -12,10 +14,12 @@ import { ProfileRoutes } from '../modules/profile/profile.routes';
 import { PromotionRoutes } from '../modules/promotion/promotion.routes';
 import { ReviewRoutes } from '../modules/review/review.routes';
 import { ShopRoutes } from '../modules/shop/shop.routes';
+import { ShopAnalyticsRoutes } from '../modules/shopAnalytics/shopAnalytics.routes';
 import { ProductTagRoutes } from '../modules/tag/tag.routes';
 import { UserRoutes } from '../modules/user/user.routes';
 import { ProductVariantRoutes } from '../modules/variannt/variant.routes';
 import { VendorRoutes } from '../modules/vendor/vendor.routes';
+import { VendorAnalyticsRoutes } from '../modules/vendorAnalytics/vendorAnalytics.routes';
 
 const router = express.Router();
 
@@ -32,6 +36,10 @@ const moduleRoutes = [
   {
     path: '/customers',
     route: CustomerRoutes,
+  },
+  {
+    path: '/addresses',
+    route: AddressRoutes,
   },
   {
     path: '/vendors',
@@ -88,6 +96,18 @@ const moduleRoutes = [
   {
     path: '/orders',
     route: OrderRoutes,
+  },
+  {
+    path: '/analytics/admin',
+    route: AdminAnalyticsRoutes,
+  },
+  {
+    path: '/analytics/vendor',
+    route: VendorAnalyticsRoutes,
+  },
+  {
+    path: '/analytics/shop',
+    route: ShopAnalyticsRoutes,
   },
 ];
 

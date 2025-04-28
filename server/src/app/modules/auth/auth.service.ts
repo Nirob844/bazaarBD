@@ -8,6 +8,7 @@ import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
+import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
 import { MAX_FAILED_ATTEMPTS } from './auth.constant';
 import {
   ILoginUser,
@@ -72,6 +73,9 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
         },
       });
     }
+    // Update admin analytics
+    await AdminAnalyticsService.updateAdminAnalytics();
+
     return user;
   });
 };

@@ -3,6 +3,9 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
+import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
+import { ShopAnalyticsService } from '../shopAnalytics/shopAnalytics.service';
+import { VendorAnalyticsService } from '../vendorAnalytics/vendorAnalytics.service';
 
 const cartToOrder = async (userId: string): Promise<Order> => {
   const customer = await prisma.customer.findUnique({
@@ -302,6 +305,23 @@ const updateOrderStatus = async (
             },
           },
         });
+
+        // Update shop analytics
+        await ShopAnalyticsService.updateShopAnalytics(
+          item.productId,
+          item.quantity,
+          item.price.toNumber()
+        );
+
+        // Update vendor analytics
+        await VendorAnalyticsService.updateVendorAnalytics(
+          item.productId,
+          item.quantity,
+          item.price.toNumber()
+        );
+
+        // Update admin analytics
+        await AdminAnalyticsService.updateAdminAnalytics();
       }
 
       // Then update the order status
