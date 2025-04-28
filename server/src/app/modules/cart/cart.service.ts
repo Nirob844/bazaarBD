@@ -2,20 +2,20 @@ import { Cart, CartItem } from '@prisma/client';
 import prisma from '../../../shared/prisma';
 
 // Create or get existing cart
-const getOrCreateCart = async (userId: string): Promise<Cart> => {
+const getOrCreateCart = async (customerId: string): Promise<Cart> => {
   let cart = await prisma.cart.findUnique({
     where: {
-      userId,
+      customerId,
     },
     include: {
       items: {
         include: {
           product: {
             include: {
-              imageUrls: true,
+              images: true,
               promotions: {
                 select: {
-                  discountPercentage: true,
+                  discountValue: true,
                   type: true,
                 },
               },
@@ -29,17 +29,17 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
   if (!cart) {
     cart = await prisma.cart.create({
       data: {
-        userId,
+        customerId,
       },
       include: {
         items: {
           include: {
             product: {
               include: {
-                imageUrls: true,
+                images: true,
                 promotions: {
                   select: {
-                    discountPercentage: true,
+                    discountValue: true,
                     type: true,
                   },
                 },
@@ -55,10 +55,10 @@ const getOrCreateCart = async (userId: string): Promise<Cart> => {
 };
 
 // Get cart by user ID
-const getCartByUserId = async (userId: string): Promise<Cart | null> => {
+const getCartByUserId = async (customerId: string): Promise<Cart | null> => {
   return prisma.cart.findUnique({
     where: {
-      userId,
+      customerId,
     },
     include: {
       items: {
@@ -72,11 +72,11 @@ const getCartByUserId = async (userId: string): Promise<Cart | null> => {
 
 // Add item to cart
 const addItemToCart = async (
-  userId: string,
+  customerId: string,
   productId: string,
   quantity: number
 ): Promise<Cart> => {
-  const cart = await getOrCreateCart(userId);
+  const cart = await getOrCreateCart(customerId);
 
   const existingItem = await prisma.cartItem.findFirst({
     where: {
@@ -104,7 +104,7 @@ const addItemToCart = async (
     });
   }
 
-  return getOrCreateCart(userId);
+  return getOrCreateCart(customerId);
 };
 
 // Update cart item quantity
@@ -129,16 +129,16 @@ const removeItemFromCart = async (cartItemId: string): Promise<CartItem> => {
 };
 
 // Clear cart
-const clearCart = async (userId: string): Promise<void> => {
-  const cart = await prisma.cart.findUnique({ where: { userId } });
+const clearCart = async (customerId: string): Promise<void> => {
+  const cart = await prisma.cart.findUnique({ where: { customerId } });
   if (!cart) return;
 
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 };
 
 // Delete cart
-const deleteCart = async (userId: string): Promise<void> => {
-  await prisma.cart.deleteMany({ where: { userId } });
+const deleteCart = async (customerId: string): Promise<void> => {
+  await prisma.cart.deleteMany({ where: { customerId } });
 };
 
 export const CartService = {
