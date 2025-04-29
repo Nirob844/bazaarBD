@@ -25,6 +25,7 @@ model User {
   vendor             Vendor?
   admin              Admin?
   emailNotifications EmailNotification[]
+  verificationCode   VerificationCode?
 }
 
 enum UserRole {
@@ -32,6 +33,15 @@ enum UserRole {
   VENDOR
   ADMIN
   SUPER_ADMIN
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  code      String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 // Customer model

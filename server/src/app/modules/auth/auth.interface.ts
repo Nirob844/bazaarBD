@@ -17,6 +17,7 @@ export type IRegisterUser = {
   password: string;
   role: UserRole;
   isLocked?: boolean;
+  isEmailVerified?: boolean;
   failedLoginAttempts?: number;
   lastLogin?: Date;
   // Customer

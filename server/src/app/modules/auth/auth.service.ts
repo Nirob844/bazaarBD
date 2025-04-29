@@ -9,6 +9,8 @@ import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
 import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
+import { sendEmailNotification } from '../emailNotification/emailNotification.utils';
+import { verificationCodeService } from '../verificationCode/verificationCode.service';
 import { MAX_FAILED_ATTEMPTS } from './auth.constant';
 import {
   ILoginUser,
@@ -73,6 +75,21 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
         },
       });
     }
+
+    const code = await verificationCodeService.createVerificationCode(user.id);
+
+    await sendEmailNotification({
+      userId: user.id,
+      toEmail: user.email,
+      type: 'ACCOUNT_CONFIRMATION',
+      subject: 'Verify Your BazaarBD Account',
+      body: `
+    <p>Welcome to BazaarBD!</p>
+    <p>Your verification code is: <strong>${code}</strong></p>
+    <p>This code will expire in 15 minutes.</p>
+  `,
+    });
+
     // Update admin analytics
     await AdminAnalyticsService.updateAdminAnalytics();
 
@@ -97,6 +114,14 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'Account is locked due to too many failed login attempts'
+    );
+  }
+
+  // check email varification
+  if (!user.isEmailVerified) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Email is not verified. Please check your email for the verification link.'
     );
   }
 

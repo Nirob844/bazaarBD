@@ -150,15 +150,19 @@ export const handleSSLCommerzIPN = async (ipnData: any) => {
   });
 
   // Send payment success email
-  await sendEmailNotification({
-    userId: user.id,
-    toEmail: user.email,
-    subject: 'Payment Successful - BazaarBD',
-    body: `<p>Dear ${order.customer.firstName},</p>
+  try {
+    await sendEmailNotification({
+      userId: user.id,
+      toEmail: user.email,
+      subject: 'Payment Successful - BazaarBD',
+      body: `<p>Dear ${order.customer.firstName},</p>
            <p>Your payment for order <strong>${order.id}</strong> was successful.</p>
            <p>Thank you for shopping with BazaarBD!</p>`,
-    type: 'PAYMENT_SUCCESS',
-  });
+      type: 'PAYMENT_SUCCESS',
+    });
+  } catch (error) {
+    console.error('Failed to send order confirmation email:', error);
+  }
 
   return payment;
 };

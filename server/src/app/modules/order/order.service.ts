@@ -340,16 +340,19 @@ const updateOrderStatus = async (
         data: { status },
       });
 
-      // Send payment success email
-      await sendEmailNotification({
-        userId: user.id,
-        toEmail: user.email,
-        subject: 'Payment Successful - BazaarBD',
-        body: `<p>Dear ${order.customer.firstName},</p>
-                 <p>Your payment for order <strong>${order.id}</strong> was successful.</p>
-                 <p>Thank you for shopping with BazaarBD!</p>`,
-        type: 'PAYMENT_SUCCESS',
-      });
+      try {
+        await sendEmailNotification({
+          userId: existingOrder.customer.userId,
+          toEmail: existingOrder.customer.user.email,
+          type: 'ORDER_CONFIRMATION',
+          subject: 'Your order has been completed!',
+          body: `<p>Dear ${existingOrder.customer.firstName},</p>
+                 <p>Your order <strong>${existingOrder.id}</strong> has been successfully delivered.</p>
+                 <p>Thank you for shopping at BazaarBD.</p>`,
+        });
+      } catch (error) {
+        console.error('Failed to send order confirmation email:', error);
+      }
     });
 
     // Return the updated order after transaction

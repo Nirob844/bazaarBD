@@ -20,6 +20,7 @@ import { UserRoutes } from '../modules/user/user.routes';
 import { ProductVariantRoutes } from '../modules/variannt/variant.routes';
 import { VendorRoutes } from '../modules/vendor/vendor.routes';
 import { VendorAnalyticsRoutes } from '../modules/vendorAnalytics/vendorAnalytics.routes';
+import { VerificationCodeRoutes } from '../modules/verificationCode/verificationCode.routes';
 
 const router = express.Router();
 
@@ -32,6 +33,10 @@ const moduleRoutes = [
   {
     path: '/users',
     route: UserRoutes,
+  },
+  {
+    path: '/verification',
+    route: VerificationCodeRoutes,
   },
   {
     path: '/customers',
