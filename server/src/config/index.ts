@@ -21,4 +21,13 @@ export default {
     api_key: process.env.CLOUD_API_KEY,
     api_secret: process.env.CLOUD_API_SECRET,
   },
+  sslcommerz: {
+    store_id: process.env.SSLCOMMERZ_STORE_ID,
+    store_passwd: process.env.SSLCOMMERZ_STORE_PASSWORD,
+  },
+  email: {
+    service: process.env.EMAIL_SERVICE,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 };

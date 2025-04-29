@@ -21,10 +21,10 @@ model User {
   updatedAt           DateTime  @updatedAt
 
   // Role-specific relationships
-  customer          Customer?
-  vendor            Vendor?
-  admin             Admin?
-  EmailNotification EmailNotification[]
+  customer           Customer?
+  vendor             Vendor?
+  admin              Admin?
+  emailNotifications EmailNotification[]
 }
 
 enum UserRole {
@@ -535,7 +535,7 @@ model Payment {
   orderId         String
   amount          Decimal
   method          PaymentMethod
-  transactionId   String?        @db.VarChar(100)
+  transactionId   String?        @unique @db.VarChar(100)
   gateway         PaymentGateway
   gatewayResponse Json? // Raw gateway response
   gatewayStatus   String?        @db.VarChar(50)

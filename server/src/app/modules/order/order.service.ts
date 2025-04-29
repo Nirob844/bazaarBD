@@ -4,6 +4,7 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
+import { sendEmailNotification } from '../emailNotification/emailNotification.utils';
 import { ShopAnalyticsService } from '../shopAnalytics/shopAnalytics.service';
 import { VendorAnalyticsService } from '../vendorAnalytics/vendorAnalytics.service';
 
@@ -263,7 +264,16 @@ const updateOrderStatus = async (
   const existingOrder = await prisma.order.findUnique({
     where: { id },
     include: {
-      items: true, // 🛒 Need order items to update inventory later
+      items: true,
+      customer: {
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -328,6 +338,17 @@ const updateOrderStatus = async (
       await tx.order.update({
         where: { id },
         data: { status },
+      });
+
+      // Send payment success email
+      await sendEmailNotification({
+        userId: user.id,
+        toEmail: user.email,
+        subject: 'Payment Successful - BazaarBD',
+        body: `<p>Dear ${order.customer.firstName},</p>
+                 <p>Your payment for order <strong>${order.id}</strong> was successful.</p>
+                 <p>Thank you for shopping with BazaarBD!</p>`,
+        type: 'PAYMENT_SUCCESS',
       });
     });
 
