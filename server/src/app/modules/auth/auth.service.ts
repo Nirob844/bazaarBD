@@ -28,7 +28,10 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
 
   const hashedPassword = await hashPassword(password);
 
-  return await prisma.$transaction(async tx => {
+  // Declare user outside so it's accessible afterward
+  let createdUser: User;
+
+  await prisma.$transaction(async tx => {
     const user = await tx.user.create({
       data: {
         email,
@@ -36,6 +39,8 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
         role,
       },
     });
+
+    createdUser = user; // store user for later use
 
     if (role === 'VENDOR') {
       if (!data.businessName || !data.businessEmail || !data.businessPhone) {
@@ -76,25 +81,28 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
       });
     }
 
-    const code = await verificationCodeService.createVerificationCode(user.id);
+    // Update admin analytics inside transaction
+    await AdminAnalyticsService.updateAdminAnalytics();
+  });
 
-    await sendEmailNotification({
-      userId: user.id,
-      toEmail: user.email,
-      type: 'ACCOUNT_CONFIRMATION',
-      subject: 'Verify Your BazaarBD Account',
-      body: `
+  // ✅ Call createVerificationCode AFTER transaction finishes
+  const code = await verificationCodeService.createVerificationCode(
+    createdUser!.id
+  );
+
+  await sendEmailNotification({
+    userId: createdUser!.id,
+    toEmail: createdUser!.email,
+    type: 'ACCOUNT_CONFIRMATION',
+    subject: 'Verify Your BazaarBD Account',
+    body: `
     <p>Welcome to BazaarBD!</p>
     <p>Your verification code is: <strong>${code}</strong></p>
     <p>This code will expire in 15 minutes.</p>
   `,
-    });
-
-    // Update admin analytics
-    await AdminAnalyticsService.updateAdminAnalytics();
-
-    return user;
   });
+
+  return createdUser!;
 };
 
 const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {

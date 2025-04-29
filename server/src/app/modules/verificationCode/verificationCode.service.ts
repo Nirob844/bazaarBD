@@ -3,6 +3,14 @@ import prisma from '../../../shared/prisma';
 import { sendEmailNotification } from '../emailNotification/emailNotification.utils';
 
 const createVerificationCode = async (userId: string) => {
+  // Ensure the user exists
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Generate a random 6-character code
   const code = randomBytes(3).toString('hex').toUpperCase(); // e.g., 'A1B2C3'
 
   await prisma.verificationCode.upsert({
