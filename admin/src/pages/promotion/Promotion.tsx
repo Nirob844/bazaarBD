@@ -253,7 +253,7 @@ const Promotion = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Promotions
+        Promotions Management
       </Typography>
 
       <Box
