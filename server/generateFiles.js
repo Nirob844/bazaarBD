@@ -39,24 +39,24 @@ fs.writeFileSync(
   path.join(targetDirectory, `${fileName}.routes.ts`),
   routesTemplate
 );
-const interfacesTemplate = `
-`;
-fs.writeFileSync(
-  path.join(targetDirectory, `${fileName}.interface.ts`),
-  interfacesTemplate
-);
-const constantsTemplate = `
-`;
-fs.writeFileSync(
-  path.join(targetDirectory, `${fileName}.constants.ts`),
-  constantsTemplate
-);
-const validationTemplate = `
-`;
-fs.writeFileSync(
-  path.join(targetDirectory, `${fileName}.validations.ts`),
-  validationTemplate
-);
+// const interfacesTemplate = `
+// `;
+// fs.writeFileSync(
+//   path.join(targetDirectory, `${fileName}.interface.ts`),
+//   interfacesTemplate
+// );
+// const constantsTemplate = `
+// `;
+// fs.writeFileSync(
+//   path.join(targetDirectory, `${fileName}.constants.ts`),
+//   constantsTemplate
+// );
+// const validationTemplate = `
+// `;
+// fs.writeFileSync(
+//   path.join(targetDirectory, `${fileName}.validations.ts`),
+//   validationTemplate
+// );
 console.log(
   `Folder '${folderName}' and files created successfully in 'src/app/modules'.`
 );

@@ -55,7 +55,9 @@ const getAllUsers = async (
             createdAt: 'desc',
           },
     include: {
-      profile: true,
+      customer: true,
+      vendor: true,
+      admin: true,
     },
   });
   const total = await prisma.user.count({
@@ -78,9 +80,9 @@ const getSingleUser = async (id: string): Promise<User | null> => {
       id,
     },
     include: {
-      profile: true,
-      cart: true,
-      orders: true,
+      customer: true,
+      vendor: true,
+      admin: true,
     },
   });
 

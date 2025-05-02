@@ -9,76 +9,238 @@ datasource db {
 
 // User model
 model User {
-  id                 String              @id @default(uuid())
-  name               String
-  email              String              @unique
-  password           String
-  role               UserRole            @default(CUSTOMER)
-  isVerified         Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  profile            UserProfile?
-  products           Product[]
-  orders             Order[]
-  cart               Cart?
-  payments           Payment[]
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  password            String
+  role                UserRole  @default(CUSTOMER)
+  isEmailVerified     Boolean   @default(false)
+  lastLogin           DateTime?
+  failedLoginAttempts Int       @default(0)
+  isLocked            Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Role-specific relationships
+  customer           Customer?
+  vendor             Vendor?
+  admin              Admin?
   emailNotifications EmailNotification[]
-  reviews            Review[]
+  verificationCode   VerificationCode?
 }
 
 enum UserRole {
-  ADMIN
   CUSTOMER
+  VENDOR
+  ADMIN
+  SUPER_ADMIN
 }
 
-model UserProfile {
-  id        String    @id @default(uuid())
-  userId    String    @unique
-  bio       String?
+model VerificationCode {
+  id        String   @id @default(uuid())
+  code      String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Customer model
+model Customer {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  firstName String     @db.VarChar(100)
+  lastName  String     @db.VarChar(100)
+  phone     String?    @db.VarChar(20)
   avatar    String?
-  phone     String?
-  address   String?
-  dob       DateTime?
-  gender    Gender?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addresses Address[]
+  orders    Order[]
+  cart      Cart?
+  reviews   Review[]
+  wishlists Wishlist[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([firstName, lastName])
 }
 
-enum Gender {
-  MALE
-  FEMALE
+// Vendor model
+model Vendor {
+  id                    String           @id @default(uuid())
+  userId                String           @unique
+  businessName          String           @db.VarChar(200)
+  businessEmail         String           @unique @db.VarChar(255)
+  businessPhone         String           @db.VarChar(20)
+  taxId                 String?
+  isVerified            Boolean          @default(false)
+  verificationDocuments Json? // Stores document URLs for verification
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shops                 Shop[]
+  products              Product[]
+  bankAccounts          BankAccount[]
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  analytics             VendorAnalytics?
+
+  @@index([businessName])
+}
+
+model VendorAnalytics {
+  id          String   @id @default(uuid())
+  vendorId    String   @unique
+  totalSales  Decimal  @default(0)
+  totalOrders Int      @default(0)
+  rating      Decimal? // Average review rating
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  updatedAt   DateTime @updatedAt
+}
+
+// Admin model
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAnalytics {
+  id             String   @id @default(uuid())
+  totalUsers     Int      @default(0)
+  totalOrders    Int      @default(0)
+  totalRevenue   Decimal  @default(0)
+  totalVendors   Int      @default(0)
+  totalProducts  Int      @default(0)
+  totalCustomers Int      @default(0)
+  updatedAt      DateTime @updatedAt
+}
+
+// Shop model for vendors
+model Shop {
+  id             String         @id @default(uuid())
+  name           String         @db.VarChar(200)
+  slug           String         @unique
+  description    String?
+  logo           String?
+  banner         String?
+  address        String?
+  contactEmail   String?        @db.VarChar(255)
+  contactPhone   String?        @db.VarChar(20)
+  isActive       Boolean        @default(true)
+  seoTitle       String?
+  seoDescription String?
+  vendorId       String
+  vendor         Vendor         @relation(fields: [vendorId], references: [id])
+  products       Product[]
+  analytics      ShopAnalytics?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([name, slug])
+}
+
+// Shop analytics
+model ShopAnalytics {
+  id           String   @id @default(uuid())
+  shopId       String   @unique
+  totalSales   Decimal  @default(0)
+  totalOrders  Int      @default(0)
+  visitorCount Int      @default(0)
+  shop         Shop     @relation(fields: [shopId], references: [id])
+  updatedAt    DateTime @updatedAt
+}
+
+// Address model (for customers)
+model Address {
+  id         String      @id @default(uuid())
+  customerId String
+  type       AddressType @default(HOME)
+  label      String?     @db.VarChar(50) // e.g., "Home", "Work"
+
+  // Contact info
+  recipient String @db.VarChar(100)
+  phone     String @db.VarChar(20)
+
+  // Regional structure (Bangladesh specific)
+  division   String  @db.VarChar(50) // Dhaka, Chattogram, etc.
+  district   String  @db.VarChar(50)
+  upazila    String  @db.VarChar(50)
+  union      String? @db.VarChar(50)
+  postalCode String  @db.VarChar(10)
+
+  // Street address
+  streetLine1 String  @db.VarChar(255)
+  streetLine2 String? @db.VarChar(255)
+
+  // Additional info
+  country   String  @default("Bangladesh") @db.VarChar(50)
+  isDefault Boolean @default(false)
+  notes     String? @db.VarChar(255) // Delivery instructions
+
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, isDefault])
+}
+
+enum AddressType {
+  HOME
+  OFFICE
+  OTHER
 }
 
 // Product model
 model Product {
-  id                 String         @id @default(uuid())
-  name               String
-  description        String?
-  price              Decimal
-  discountPercentage Decimal?
-  sku                String         @unique
-  status             ProductStatus  @default(ACTIVE)
-  categoryId         String
-  userId             String
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  category           Category       @relation(fields: [categoryId], references: [id])
-  user               User           @relation(fields: [userId], references: [id])
-  inventory          Inventory?
-  orderItems         OrderItem[]
-  cartItems          CartItem[]
-  promotions         Promotion[]
-  reviews            Review[]
-  imageUrls          ProductImage[]
+  id          String  @id @default(uuid())
+  name        String  @db.VarChar(200)
+  slug        String  @unique
+  description String?
+
+  // Pricing
+  basePrice Decimal
+  salePrice Decimal?
+  costPrice Decimal?
+
+  // Metadata
+  sku     String        @unique @db.VarChar(50)
+  barcode String?       @db.VarChar(50)
+  status  ProductStatus @default(DRAFT)
+
+  // Relations
+  categoryId String
+  shopId     String?
+  vendorId   String
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Full Relationships
+  category      Category           @relation(fields: [categoryId], references: [id])
+  shop          Shop?              @relation(fields: [shopId], references: [id])
+  vendor        Vendor             @relation(fields: [vendorId], references: [id])
+  images        ProductImage[]
+  inventory     Inventory?
+  variants      ProductVariant[]
+  attributes    ProductAttribute[]
+  promotions    Promotion[]
+  tags          ProductTag[]
+  reviews       Review[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
+
+  @@index([name, slug, status])
 }
 
 enum ProductStatus {
   DRAFT
-  ACTIVE
-  INACTIVE
+  PUBLISHED
   OUT_OF_STOCK
   DISCONTINUED
+  ARCHIVED
 }
 
 model ProductImage {
@@ -86,29 +248,45 @@ model ProductImage {
   productId String
   url       String
   altText   String?
+  isPrimary Boolean @default(false)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 // Category model
 model Category {
-  id        String    @id @default(uuid())
-  name      String
-  imageUrl  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  products  Product[]
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
 }
 
 // Inventory model
 model Inventory {
-  id        String             @id @default(uuid())
-  productId String             @unique
-  stock     Int
-  product   Product            @relation(fields: [productId], references: [id])
-  history   InventoryHistory[]
+  id          String             @id @default(uuid())
+  productId   String             @unique
+  stock       Int                @default(0)
+  warehouseId String?
+  product     Product            @relation(fields: [productId], references: [id])
+  warehouse   Warehouse?         @relation(fields: [warehouseId], references: [id])
+  history     InventoryHistory[]
+
+  @@index([productId, warehouseId])
 }
 
-// Inventory History model
+model Warehouse {
+  id        String      @id @default(uuid())
+  name      String      @db.VarChar(100)
+  location  String?
+  isActive  Boolean     @default(true)
+  inventory Inventory[]
+}
+
+// Enhanced InventoryHistory with more details
 model InventoryHistory {
   id             String     @id @default(uuid())
   inventoryId    String
@@ -116,130 +294,272 @@ model InventoryHistory {
   quantityChange Int
   previousStock  Int
   newStock       Int
+  referenceId    String? // Order ID, Adjustment ID, etc.
+  notes          String?
   createdAt      DateTime   @default(now())
   inventory      Inventory  @relation(fields: [inventoryId], references: [id])
+
+  @@index([inventoryId, createdAt])
 }
 
 enum ActionType {
-  IN
-  OUT
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+  DAMAGE
+  TRANSFER
 }
 
 model Promotion {
-  id                 String        @id @default(uuid())
-  productId          String
-  type               PromotionType
-  discountPercentage Decimal
-  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt          DateTime      @default(now())
+  id            String        @id @default(uuid())
+  productId     String
+  type          PromotionType
+  discountValue Decimal
+  isPercentage  Boolean       @default(true)
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean       @default(true)
+  maxUses       Int?
+  currentUses   Int           @default(0)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([productId, isActive, endDate])
 }
 
 enum PromotionType {
-  FEATURED // Highlighted on homepage or special section
-  FLASH_SALE // Limited-time discount
-  BEST_DEAL // Special offers or bundle deals
-  TOP_SELLING // Based on highest sales
-  NEW_ARRIVAL // Recently added products
+  FLASH_SALE
+  SEASONAL
+  CLEARANCE
+  BUNDLE
+  LOYALTY
+}
+
+// ProductAttribute with standardized values
+model ProductAttribute {
+  id        String  @id @default(uuid())
+  productId String
+  key       String  @db.VarChar(50)
+  value     String  @db.VarChar(255)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, key])
+}
+
+// ProductVariant with better SKU management
+model ProductVariant {
+  id        String      @id @default(uuid())
+  productId String
+  name      String      @db.VarChar(100) // e.g., "Red - Medium"
+  sku       String?     @unique @db.VarChar(50)
+  price     Decimal? // Overrides product price if set
+  stock     Int? // Overrides product stock if set
+  imageUrl  String?
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  OrderItem OrderItem[]
+  CartItem  CartItem[]
+
+  @@index([productId, sku])
+}
+
+// Product tags for better organization
+model ProductTag {
+  id       String    @id @default(uuid())
+  name     String    @unique @db.VarChar(50)
+  products Product[]
 }
 
 model Review {
-  id        String  @id @default(uuid())
-  productId String
-  userId    String
-  rating    Int
-  comment   String?
-  product   Product @relation(fields: [productId], references: [id])
-  user      User    @relation(fields: [userId], references: [id])
+  id         String   @id @default(uuid())
+  productId  String
+  customerId String
+  rating     Int
+  title      String?  @db.VarChar(100)
+  comment    String?  @db.VarChar(1000)
+  isApproved Boolean  @default(false)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId, isApproved, rating])
 }
 
 // Order model
 model Order {
-  id        String      @id @default(uuid())
-  userId    String
-  total     Decimal
-  status    OrderStatus
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  user      User        @relation(fields: [userId], references: [id])
-  items     OrderItem[]
-  payments  Payment[]
+  id              String         @id @default(uuid())
+  orderNumber     String         @unique // e.g., "ORD-20250424-0001"
+  customerId      String
+  addressId       String
+  subtotal        Decimal
+  shipping        Decimal
+  tax             Decimal
+  discount        Decimal        @default(0)
+  total           Decimal
+  status          OrderStatus    @default(PENDING)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  shippingStatus  ShippingStatus @default(PENDING)
+  trackingCode    String?        @db.VarChar(50)
+  customerNote    String?        @db.VarChar(500)
+  adminNotes      String?        @db.VarChar(500)
+  cancelledReason String?        @db.VarChar(255)
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  address  Address     @relation(fields: [addressId], references: [id])
+  items    OrderItem[]
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([customerId, status, createdAt])
 }
 
 enum OrderStatus {
   PENDING
   PROCESSING
-  SHIPPED
-  DELIVERED
+  COMPLETED
   CANCELLED
+  REFUNDED
 }
 
-// OrderItem model
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+}
+
+// OrderItem with variant support
 model OrderItem {
-  id        String  @id @default(uuid())
+  id        String          @id @default(uuid())
   orderId   String
   productId String
+  variantId String?
   quantity  Int
-  unitPrice Decimal // Stores the price at the time of order (prevents inconsistencies)
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price     Decimal // Price at time of order
+  discount  Decimal         @default(0)
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId, productId])
 }
 
 // Cart model
 model Cart {
-  id     String     @id @default(uuid())
-  userId String     @unique
-  user   User       @relation(fields: [userId], references: [id])
-  items  CartItem[]
+  id         String     @id @default(uuid())
+  customerId String     @unique
+  expiresAt  DateTime? // For abandoned cart recovery
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
-// CartItem model
+// CartItem with variant support
 model CartItem {
-  id        String  @id @default(uuid())
+  id        String          @id @default(uuid())
   cartId    String
   productId String
-  quantity  Int
-  cart      Cart    @relation(fields: [cartId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  variantId String?
+  quantity  Int             @default(1)
+  cart      Cart            @relation(fields: [cartId], references: [id])
+  product   Product         @relation(fields: [productId], references: [id])
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([cartId, productId, variantId])
 }
 
+model Wishlist {
+  id         String         @id @default(uuid())
+  customerId String         @unique
+  customer   Customer       @relation(fields: [customerId], references: [id])
+  items      WishlistItem[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid())
+  wishlistId String
+  productId  String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@unique([wishlistId, productId])
+}
+
+// EmailNotification with templates
 model EmailNotification {
-  id      String      @id @default(uuid())
-  userId  String
-  type    EmailType
-  subject String
-  body    String
-  sentAt  DateTime    @default(now())
-  status  EmailStatus
-  user    User        @relation(fields: [userId], references: [id])
+  id         String      @id @default(uuid())
+  userId     String
+  type       EmailType
+  templateId String? // Reference to email template
+  subject    String
+  body       String
+  toEmail    String
+  fromEmail  String      @default("noreply@example.com")
+  status     EmailStatus @default(PENDING)
+  sentAt     DateTime?
+  openedAt   DateTime?
+  error      String?
+  user       User        @relation(fields: [userId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([userId, type, status, sentAt])
 }
 
 enum EmailType {
   ACCOUNT_CONFIRMATION
   ORDER_CONFIRMATION
+  ORDER_SHIPPED
+  ORDER_DELIVERED
   PAYMENT_SUCCESS
+  PAYMENT_FAILED
   PASSWORD_RESET
+  ACCOUNT_ACTIVITY
+  PROMOTIONAL
 }
 
 enum EmailStatus {
   PENDING
   SENT
+  DELIVERED
+  OPENED
   FAILED
 }
 
+// Payment model with better gateway integration
 model Payment {
-  id            String        @id @default(uuid())
-  orderId       String
-  userId        String
-  method        PaymentMethod
-  amount        Decimal
-  status        PaymentStatus
-  transactionId String?       @unique
-  paymentDate   DateTime      @default(now())
-  currency      String        @default("BDT")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  order         Order         @relation(fields: [orderId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  id              String         @id @default(uuid())
+  orderId         String
+  amount          Decimal
+  method          PaymentMethod
+  transactionId   String?        @unique @db.VarChar(100)
+  gateway         PaymentGateway
+  gatewayResponse Json? // Raw gateway response
+  gatewayStatus   String?        @db.VarChar(50)
+  currency        String         @default("BDT") @db.VarChar(3)
+  status          PaymentStatus  @default(PENDING)
+  paidAt          DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  order  Order    @relation(fields: [orderId], references: [id])
+  Refund Refund[]
+
+  @@index([orderId, status, method, createdAt])
 }
 
 enum PaymentMethod {
@@ -247,12 +567,84 @@ enum PaymentMethod {
   NAGAD
   SSL_COMMERZ
   CARD
-  COD // Cash on Delivery
+  COD
+  BANK_TRANSFER
+}
+
+enum PaymentGateway {
+  BKASH
+  NAGAD
+  SSLCOMMERZ
+  STRIPE
+  PAYPAL
+  MANUAL
 }
 
 enum PaymentStatus {
   PENDING
-  COMPLETED
-  FAILED
+  AUTHORIZED
+  CAPTURED
+  PARTIALLY_REFUNDED
   REFUNDED
+  VOIDED
+  FAILED
+}
+
+// Refund model for better financial tracking
+model Refund {
+  id          String       @id @default(uuid())
+  orderId     String
+  paymentId   String?
+  amount      Decimal
+  reason      RefundReason
+  status      RefundStatus @default(PENDING)
+  processedBy String? // Admin ID who processed
+  notes       String?
+  order       Order        @relation(fields: [orderId], references: [id])
+  payment     Payment?     @relation(fields: [paymentId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orderId, status, createdAt])
+}
+
+enum RefundReason {
+  CUSTOMER_REQUEST
+  DEFECTIVE_PRODUCT
+  WRONG_ITEM
+  LATE_DELIVERY
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PROCESSED
+  REJECTED
+  CANCELLED
+}
+
+// BankAccount model with validation
+model BankAccount {
+  id            String          @id @default(uuid())
+  vendorId      String
+  bankName      String          @db.VarChar(100)
+  accountName   String          @db.VarChar(100)
+  accountNumber String          @db.VarChar(50)
+  accountType   BankAccountType @default(CURRENT)
+  branch        String?         @db.VarChar(100)
+  routingNumber String?         @db.VarChar(50)
+  isDefault     Boolean         @default(false)
+  isVerified    Boolean         @default(false)
+  vendor        Vendor          @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([vendorId, isDefault])
+}
+
+enum BankAccountType {
+  CURRENT
+  SAVINGS
+  SALARY
 }

@@ -1,4 +1,4 @@
-import { Gender, User } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 export type ILoginUser = {
   email: string;
@@ -12,13 +12,23 @@ export type IRefreshTokenResponse = {
   accessToken: string;
 };
 
-export type UserWithProfile = User & {
-  profile?: {
-    bio?: string;
-    avatar?: string;
-    phone?: string;
-    address?: string;
-    gender?: Gender;
-    dob?: Date;
-  };
+export type IRegisterUser = {
+  email: string;
+  password: string;
+  role: UserRole;
+  isLocked?: boolean;
+  isEmailVerified?: boolean;
+  failedLoginAttempts?: number;
+  lastLogin?: Date;
+  // Customer
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  avatar?: string;
+  // Vendor
+  businessName?: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  taxId?: string;
+  verificationDocuments?: any;
 };

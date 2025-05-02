@@ -6,14 +6,18 @@ import { CartController } from './cart.controller';
 const router = express.Router();
 
 router.get(
-  '/:userId',
+  '/:customerId',
   auth(ENUM_USER_ROLE.CUSTOMER),
   CartController.getOrCreateCart
 );
 
 router.get(
-  '/user/:userId',
-  auth(ENUM_USER_ROLE.CUSTOMER, ENUM_USER_ROLE.ADMIN),
+  '/user/:customerId',
+  auth(
+    ENUM_USER_ROLE.CUSTOMER,
+    ENUM_USER_ROLE.ADMIN,
+    ENUM_USER_ROLE.SUPER_ADMIN
+  ),
   CartController.getCartByUserId
 );
 
@@ -32,13 +36,13 @@ router.delete(
 );
 
 router.delete(
-  '/clear/:userId',
+  '/clear/:customerId',
   auth(ENUM_USER_ROLE.CUSTOMER),
   CartController.clearCart
 );
 
 router.delete(
-  '/:userId',
+  '/:customerId',
   auth(ENUM_USER_ROLE.ADMIN),
   CartController.deleteCart
 );

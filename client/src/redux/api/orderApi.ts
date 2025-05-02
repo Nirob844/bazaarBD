@@ -16,7 +16,7 @@ export const addOrderApi = baseApi.injectEndpoints({
     getOrder: build.query({
       query: () => {
         return {
-          url: ORDER_URL,
+          url: `${ORDER_URL}/user-orders`,
           method: "GET",
         };
       },

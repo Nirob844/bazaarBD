@@ -44,13 +44,13 @@ const getAllFromDB = async (
       product: {
         select: {
           name: true,
-          price: true,
+          basePrice: true,
           inventory: {
             select: {
               stock: true,
             },
           },
-          imageUrls: {
+          images: {
             select: {
               url: true,
               altText: true,
@@ -80,7 +80,26 @@ const getDataById = async (id: string): Promise<Promotion | null> => {
       id,
     },
     include: {
-      product: true,
+      product: {
+        include: {
+          images: {
+            select: {
+              url: true,
+              altText: true,
+            },
+          },
+          inventory: {
+            select: {
+              stock: true,
+            },
+          },
+          category: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 

@@ -12,7 +12,7 @@ const insertIntoDB = async (data: Inventory): Promise<Inventory> => {
       stock,
       history: {
         create: {
-          action: 'IN',
+          action: 'PURCHASE',
           quantityChange: stock,
           previousStock: 0,
           newStock: stock,
@@ -20,7 +20,7 @@ const insertIntoDB = async (data: Inventory): Promise<Inventory> => {
       },
     },
     include: {
-      history: true, // Return history with inventory
+      history: true,
     },
   });
 
@@ -104,7 +104,7 @@ const updateOneInDB = async (
         },
         history: {
           create: {
-            action: 'IN',
+            action: 'PURCHASE',
             quantityChange: payload.stock,
             previousStock: existingInventory.stock,
             newStock: existingInventory.stock + payload.stock,

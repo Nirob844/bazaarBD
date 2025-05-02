@@ -7,7 +7,7 @@ import { CartService } from './cart.service';
 
 // Get or create cart
 const getOrCreateCart = catchAsync(async (req: Request, res: Response) => {
-  const result = await CartService.getOrCreateCart(req.params.userId);
+  const result = await CartService.getOrCreateCart(req.params.customerId);
   sendResponse<Cart>(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -18,7 +18,7 @@ const getOrCreateCart = catchAsync(async (req: Request, res: Response) => {
 
 // Get cart by user ID
 const getCartByUserId = catchAsync(async (req: Request, res: Response) => {
-  const result = await CartService.getCartByUserId(req.params.userId);
+  const result = await CartService.getCartByUserId(req.params.customerId);
   sendResponse<Cart | null>(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -29,8 +29,12 @@ const getCartByUserId = catchAsync(async (req: Request, res: Response) => {
 
 // Add item to cart
 const addItemToCart = catchAsync(async (req: Request, res: Response) => {
-  const { userId, productId, quantity } = req.body;
-  const result = await CartService.addItemToCart(userId, productId, quantity);
+  const { customerId, productId, quantity } = req.body;
+  const result = await CartService.addItemToCart(
+    customerId,
+    productId,
+    quantity
+  );
   sendResponse<Cart>(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -66,8 +70,8 @@ const removeItemFromCart = catchAsync(async (req: Request, res: Response) => {
 
 // Clear cart
 const clearCart = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  await CartService.clearCart(userId);
+  const { customerId } = req.params;
+  await CartService.clearCart(customerId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -77,8 +81,8 @@ const clearCart = catchAsync(async (req: Request, res: Response) => {
 
 // Delete entire cart
 const deleteCart = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  await CartService.deleteCart(userId);
+  const { customerId } = req.params;
+  await CartService.deleteCart(customerId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
