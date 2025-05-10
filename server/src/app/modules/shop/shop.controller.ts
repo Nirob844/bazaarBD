@@ -63,10 +63,82 @@ const deleteByIdFromDB = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// New controller methods
+const getShopProducts = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const options = pick(req.query, paginationFields);
+  const result = await ShopService.getShopProducts(id, options);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Shop products fetched successfully',
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getFeaturedShops = catchAsync(async (req: Request, res: Response) => {
+  const result = await ShopService.getFeaturedShops();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Featured shops fetched successfully',
+    data: result,
+  });
+});
+
+const getShopAnalytics = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ShopService.getShopAnalytics(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Shop analytics fetched successfully',
+    data: result,
+  });
+});
+
+const getVendorDashboard = catchAsync(async (req: Request, res: Response) => {
+  const result = await ShopService.getVendorDashboard(req.user?.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Vendor dashboard data fetched successfully',
+    data: result,
+  });
+});
+
+const updateShopStatus = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ShopService.updateShopStatus(id, req.body.status);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Shop status updated successfully',
+    data: result,
+  });
+});
+
+const getVendorStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await ShopService.getVendorStats(req.user?.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Vendor stats fetched successfully',
+    data: result,
+  });
+});
+
 export const ShopController = {
   insertIntoDB,
   getAllFromDB,
   getDataById,
   updateOneInDB,
   deleteByIdFromDB,
+  getShopProducts,
+  getFeaturedShops,
+  getShopAnalytics,
+  getVendorDashboard,
+  updateShopStatus,
+  getVendorStats,
 };
