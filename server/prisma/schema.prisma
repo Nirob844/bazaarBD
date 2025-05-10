@@ -850,40 +850,42 @@ model WishlistItem {
 model EmailNotification {
   id         String      @id @default(uuid())
   userId     String
-  type       EmailType
-  templateId String? // Reference to email template
-  subject    String
-  body       String
   toEmail    String
-  fromEmail  String      @default("noreply@example.com")
+  subject    String
+  body       String      @db.Text
+  type       EmailType
+  templateId String?
   status     EmailStatus @default(PENDING)
   sentAt     DateTime?
-  openedAt   DateTime?
-  error      String?
-  user       User        @relation(fields: [userId], references: [id])
+  error      String?     @db.Text
+  messageId  String?
+  retryCount Int         @default(0)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  @@index([userId, type, status, sentAt])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
 }
 
 enum EmailType {
+  WELCOME_EMAIL
   ACCOUNT_CONFIRMATION
+  PASSWORD_RESET
   ORDER_CONFIRMATION
-  ORDER_SHIPPED
-  ORDER_DELIVERED
   PAYMENT_SUCCESS
   PAYMENT_FAILED
-  PASSWORD_RESET
-  ACCOUNT_ACTIVITY
-  PROMOTIONAL
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  ACCOUNT_LOCKED
+  SECURITY_ALERT
 }
 
 enum EmailStatus {
   PENDING
   SENT
-  DELIVERED
-  OPENED
   FAILED
 }
 

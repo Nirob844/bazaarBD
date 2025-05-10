@@ -16,6 +16,10 @@ export default {
     expires_in: process.env.JWT_EXPIRES_IN,
     refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
   },
+  super_admin: {
+    email: process.env.SUPER_ADMIN_EMAIL || 'superadmin@bazaarbd.com',
+    password: process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin@123',
+  },
   cloudinary: {
     cloud_name: process.env.CLOUD_NAME,
     api_key: process.env.CLOUD_API_KEY,

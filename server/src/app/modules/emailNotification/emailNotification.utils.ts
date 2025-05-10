@@ -1,6 +1,26 @@
+import { EmailStatus } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import config from '../../../config';
 import prisma from '../../../shared/prisma';
+import { logger } from '../../../utils/logger';
+import {
+  EMAIL_TEMPLATES,
+  EmailType,
+  TemplateData,
+} from './emailNotification.constant';
+
+type EmailNotificationParams = {
+  userId: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  type: EmailType;
+  templateId?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+  }>;
+};
 
 export const sendEmailNotification = async ({
   userId,
@@ -9,18 +29,14 @@ export const sendEmailNotification = async ({
   body,
   type,
   templateId,
-}: {
-  userId: string;
-  toEmail: string;
-  subject: string;
-  body: string;
-  type:
-    | 'ORDER_CONFIRMATION'
-    | 'PAYMENT_SUCCESS'
-    | 'PAYMENT_FAILED'
-    | 'ACCOUNT_CONFIRMATION'; // etc.
-  templateId?: string;
-}) => {
+  attachments,
+}: EmailNotificationParams) => {
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(toEmail)) {
+    throw new Error('Invalid email address format');
+  }
+
   // 1. Log email as pending
   const notification = await prisma.emailNotification.create({
     data: {
@@ -30,43 +46,94 @@ export const sendEmailNotification = async ({
       body,
       type,
       templateId,
-      status: 'PENDING',
+      status: EmailStatus.PENDING,
     },
   });
 
   try {
-    // 2. Send email via Nodemailer
+    // 2. Configure email transporter
     const transporter = nodemailer.createTransport({
-      service: 'gmail', // Or Mailgun, SendGrid, etc.
+      service: config.email.service || 'gmail',
       auth: {
         user: config.email.user,
         pass: config.email.pass,
       },
+      tls: {
+        rejectUnauthorized: false, // Only for development
+      },
     });
 
-    await transporter.sendMail({
-      from: 'nirobhossainalip@gmail.com',
+    // 3. Send email
+    const mailOptions = {
+      from: `"BazaarBD" <${config.email.user}>`,
       to: toEmail,
       subject,
       html: body,
+      attachments,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    logger.info(`Email sent successfully: ${info.messageId}`);
+
+    // 4. Update status to SENT
+    await prisma.emailNotification.update({
+      where: { id: notification.id },
+      data: {
+        status: EmailStatus.SENT,
+        sentAt: new Date(),
+        messageId: info.messageId,
+      },
     });
 
-    // 3. Update status to SENT
-    await prisma.emailNotification.update({
-      where: { id: notification.id },
-      data: {
-        status: 'SENT',
-        sentAt: new Date(),
-      },
-    });
+    return info;
   } catch (error) {
-    // 4. Update status to FAILED if sending fails
+    logger.error('Failed to send email:', error);
+
+    // 5. Update status to FAILED
     await prisma.emailNotification.update({
       where: { id: notification.id },
       data: {
-        status: 'FAILED',
+        status: EmailStatus.FAILED,
         error: (error as Error).message,
+        retryCount: {
+          increment: 1,
+        },
       },
     });
+
+    throw error;
   }
+};
+
+// Helper function to send template-based emails
+export const sendTemplateEmail = async <T extends EmailType>(
+  type: T,
+  params: {
+    userId: string;
+    toEmail: string;
+    templateData: TemplateData[keyof TemplateData];
+    attachments?: Array<{
+      filename: string;
+      content: Buffer | string;
+    }>;
+  }
+) => {
+  const template = EMAIL_TEMPLATES[
+    type
+  ] as import('./emailNotification.constant').EmailTemplate<T>;
+  if (!template) {
+    throw new Error(`Email template not found for type: ${type}`);
+  }
+
+  const { subject, body } = template.template(
+    params.templateData as TemplateData[T]
+  );
+  return sendEmailNotification({
+    userId: params.userId,
+    toEmail: params.toEmail,
+    subject,
+    body,
+    type,
+    attachments: params.attachments,
+  });
 };

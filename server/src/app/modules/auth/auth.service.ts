@@ -8,8 +8,10 @@ import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
+import { logger } from '../../../utils/logger';
 import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
-import { sendEmailNotification } from '../emailNotification/emailNotification.utils';
+import { EmailType } from '../emailNotification/emailNotification.constant';
+import { sendTemplateEmail } from '../emailNotification/emailNotification.utils';
 import { verificationCodeService } from '../verificationCode/verificationCode.service';
 import { MAX_FAILED_ATTEMPTS } from './auth.constant';
 import {
@@ -21,14 +23,35 @@ import {
 const registerUser = async (data: IRegisterUser): Promise<User> => {
   const { email, password, role } = data;
 
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Please provide a valid email address'
+    );
+  }
+
+  // Validate password strength
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character'
+    );
+  }
+
   const isUserExist = await getUserByEmail(email);
   if (isUserExist) {
-    throw new Error('Email is already in use!');
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      'This email address is already registered. Please use a different email or try logging in.'
+    );
   }
 
   const hashedPassword = await hashPassword(password);
 
-  // Declare user outside so it's accessible afterward
   let createdUser: User;
 
   await prisma.$transaction(async tx => {
@@ -40,12 +63,30 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
       },
     });
 
-    createdUser = user; // store user for later use
+    createdUser = user;
 
     if (role === 'VENDOR') {
       if (!data.businessName || !data.businessEmail || !data.businessPhone) {
-        throw new Error(
-          'Vendor must provide businessName, businessEmail, and businessPhone'
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Business registration requires business name, email, and phone number'
+        );
+      }
+
+      // Validate business email format
+      if (!emailRegex.test(data.businessEmail)) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Please provide a valid business email address'
+        );
+      }
+
+      // Validate business phone format (basic validation)
+      const phoneRegex = /^\+?[\d\s-]{10,}$/;
+      if (!phoneRegex.test(data.businessPhone)) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Please provide a valid business phone number'
         );
       }
 
@@ -67,7 +108,21 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
       });
     } else {
       if (!data.firstName || !data.lastName) {
-        throw new Error('Customer must provide firstName and lastName');
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'First name and last name are required for customer registration'
+        );
+      }
+
+      // Validate phone format for customers if provided
+      if (data.phone) {
+        const phoneRegex = /^\+?[\d\s-]{10,}$/;
+        if (!phoneRegex.test(data.phone)) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Please provide a valid phone number'
+          );
+        }
       }
 
       await tx.customer.create({
@@ -81,25 +136,19 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
       });
     }
 
-    // Update admin analytics inside transaction
     await AdminAnalyticsService.updateAdminAnalytics();
   });
 
-  // ✅ Call createVerificationCode AFTER transaction finishes
   const code = await verificationCodeService.createVerificationCode(
     createdUser!.id
   );
 
-  await sendEmailNotification({
+  await sendTemplateEmail(EmailType.ACCOUNT_CONFIRMATION, {
     userId: createdUser!.id,
     toEmail: createdUser!.email,
-    type: 'ACCOUNT_CONFIRMATION',
-    subject: 'Verify Your BazaarBD Account',
-    body: `
-    <p>Welcome to BazaarBD!</p>
-    <p>Your verification code is: <strong>${code}</strong></p>
-    <p>This code will expire in 15 minutes.</p>
-  `,
+    templateData: {
+      code: code,
+    },
   });
 
   return createdUser!;
@@ -109,27 +158,32 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   const { email, password } = payload;
 
   if (!email || !password) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Email & password are required');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Please provide both email and password to login'
+    );
   }
 
   const user = await getUserByEmail(email);
 
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No account found with this email address. Please check your email or register a new account.'
+    );
   }
 
   if (user.isLocked) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      'Account is locked due to too many failed login attempts'
+      'Your account has been temporarily locked due to multiple failed login attempts. Please try again later or contact support for assistance.'
     );
   }
 
-  // check email varification
   if (!user.isEmailVerified) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      'Email is not verified. Please check your email for the verification link.'
+      'Please verify your email address before logging in. Check your inbox for the verification email.'
     );
   }
 
@@ -137,8 +191,8 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
 
   if (!passwordMatched) {
     const updatedFailedAttempts = user.failedLoginAttempts + 1;
+    const remainingAttempts = MAX_FAILED_ATTEMPTS - updatedFailedAttempts;
 
-    // Update failed attempts and lock the user if exceeded threshold
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -147,7 +201,12 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
       },
     });
 
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Password is incorrect');
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      remainingAttempts > 0
+        ? `Invalid password. You have ${remainingAttempts} login attempts remaining.`
+        : 'Account locked due to too many failed attempts. Please contact support.'
+    );
   }
 
   // On successful login: update lastLogin and reset failed attempts
@@ -180,7 +239,51 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   };
 };
 
+const createSuperAdmin = async (): Promise<void> => {
+  const superAdminEmail = config.super_admin.email;
+  const superAdminPassword = config.super_admin.password;
+
+  if (!superAdminEmail || !superAdminPassword) {
+    throw new Error('Super admin credentials not configured');
+  }
+
+  // Check if super admin exists
+  const existingSuperAdmin = await prisma.user.findFirst({
+    where: {
+      role: 'SUPER_ADMIN',
+    },
+  });
+
+  if (existingSuperAdmin) {
+    logger.info('Super admin user already exists');
+    return;
+  }
+
+  // Create super admin user
+  const hashedPassword = await hashPassword(superAdminPassword);
+
+  await prisma.$transaction(async tx => {
+    const user = await tx.user.create({
+      data: {
+        email: superAdminEmail,
+        password: hashedPassword,
+        role: 'SUPER_ADMIN',
+        isEmailVerified: true, // Auto verify super admin
+      },
+    });
+
+    await tx.admin.create({
+      data: {
+        userId: user.id,
+      },
+    });
+
+    logger.info('Super admin user created successfully');
+  });
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
+  createSuperAdmin,
 };
