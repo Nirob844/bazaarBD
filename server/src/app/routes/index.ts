@@ -1,5 +1,6 @@
 import express from 'express';
 import { AddressRoutes } from '../modules/address/address.routes';
+import { AdminRoutes } from '../modules/admin/admin.routes';
 import { AdminAnalyticsRoutes } from '../modules/adminAnalytics/adminAnalytics.routes';
 import { ProductAttributeRoutes } from '../modules/attribute/attribute.routes';
 import { AuthRoutes } from '../modules/auth/auth.routes';
@@ -49,6 +50,10 @@ const moduleRoutes = [
   {
     path: '/vendors',
     route: VendorRoutes,
+  },
+  {
+    path: '/admins',
+    route: AdminRoutes,
   },
   {
     path: '/profile',

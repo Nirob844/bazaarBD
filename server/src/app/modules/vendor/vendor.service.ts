@@ -5,7 +5,11 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
-import { vendorSearchableFields } from './vendor.constants';
+import {
+  VENDOR_CONSTANTS,
+  vendorFilterableFields,
+  vendorProfileFields,
+} from './vendor.constants';
 import { IVendorFilterRequest } from './vendor.interface';
 import { validateBankAccount } from './vendor.validation';
 
@@ -25,26 +29,83 @@ const getAllVendors = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
 
-  const andConditions = [];
+  const andConditions: Prisma.VendorWhereInput[] = [
+    {
+      user: {
+        deletionStatus: VENDOR_CONSTANTS.DELETION_STATUS.ACTIVE,
+      },
+    },
+  ];
 
   if (searchTerm) {
     andConditions.push({
-      OR: vendorSearchableFields.map(field => ({
-        [field]: {
-          contains: searchTerm,
-          mode: 'insensitive',
+      OR: [
+        // Search in vendor fields
+        {
+          businessName: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
         },
-      })),
+        {
+          businessEmail: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          businessPhone: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          taxId: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        // Search in user fields
+        {
+          user: {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ],
     });
   }
 
   if (Object.keys(filterData).length > 0) {
     andConditions.push({
-      AND: Object.keys(filterData).map(key => ({
-        [key]: {
-          equals: (filterData as any)[key],
-        },
-      })),
+      AND: Object.keys(filterData).map(key => {
+        if (vendorFilterableFields.includes(key)) {
+          // Handle date range filters
+          if (key === 'createdAt' || key === 'updatedAt') {
+            const [startDate, endDate] = (filterData as any)[key].split(',');
+            return {
+              [key]: {
+                gte: startDate ? new Date(startDate) : undefined,
+                lte: endDate ? new Date(endDate) : undefined,
+              },
+            };
+          }
+          // Handle boolean filters
+          if (key === 'isVerified') {
+            return {
+              [key]: (filterData as any)[key] === 'true',
+            };
+          }
+          return {
+            [key]: {
+              equals: (filterData as any)[key],
+            },
+          };
+        }
+        return {};
+      }),
     });
   }
 
@@ -61,6 +122,21 @@ const getAllVendors = async (
         : {
             createdAt: 'desc',
           },
+    include: {
+      shops: {
+        where: {
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          analytics: true,
+        },
+      },
+      user: {
+        select: vendorProfileFields.user,
+      },
+    },
   });
 
   const total = await prisma.vendor.count({

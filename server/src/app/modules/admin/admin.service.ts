@@ -5,7 +5,7 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
-import { adminSearchableFields } from './admin.constant';
+import { ADMIN_CONSTANTS, adminFilterableFields } from './admin.constant';
 import { IAdminFilterRequest } from './admin.interface';
 
 const createAdmin = async (data: Prisma.AdminCreateInput): Promise<Admin> => {
@@ -22,26 +22,89 @@ const getAllAdmins = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
 
-  const andConditions = [];
+  const andConditions: Prisma.AdminWhereInput[] = [
+    {
+      user: {
+        deletionStatus: ADMIN_CONSTANTS.DELETION_STATUS.ACTIVE,
+      },
+    },
+  ];
 
   if (searchTerm) {
     andConditions.push({
-      OR: adminSearchableFields.map((field: string) => ({
-        [field]: {
-          contains: searchTerm,
-          mode: 'insensitive',
+      OR: [
+        // Search in admin fields
+        {
+          firstName: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
         },
-      })),
+        {
+          lastName: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          phoneNumber: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          designation: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          department: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        // Search in user fields
+        {
+          user: {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ],
     });
   }
 
   if (Object.keys(filterData).length > 0) {
     andConditions.push({
-      AND: Object.keys(filterData).map(key => ({
-        [key]: {
-          equals: (filterData as any)[key],
-        },
-      })),
+      AND: Object.keys(filterData).map(key => {
+        if (adminFilterableFields.includes(key)) {
+          // Handle date range filters
+          if (key === 'createdAt' || key === 'updatedAt') {
+            const [startDate, endDate] = (filterData as any)[key].split(',');
+            return {
+              [key]: {
+                gte: startDate ? new Date(startDate) : undefined,
+                lte: endDate ? new Date(endDate) : undefined,
+              },
+            };
+          }
+          // Handle boolean filters
+          if (key === 'isActive') {
+            return {
+              [key]: (filterData as any)[key] === 'true',
+            };
+          }
+          return {
+            [key]: {
+              equals: (filterData as any)[key],
+            },
+          };
+        }
+        return {};
+      }),
     });
   }
 

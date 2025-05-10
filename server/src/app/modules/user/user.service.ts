@@ -7,8 +7,7 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 import {
-  USER_PAGINATION,
-  USER_SEARCH,
+  DELETION_STATUS,
   userFilterableFields,
   userProfileFields,
   userSearchableFields,
@@ -24,95 +23,131 @@ const getAllUsers = async (
   filters: IUserFilterRequest,
   options: IPaginationOptions
 ): Promise<IGenericResponse<User[]>> => {
-  const { limit, page, skip } = paginationHelpers.calculatePagination({
-    ...options,
-    limit: options.limit || USER_PAGINATION.DEFAULT_LIMIT,
-    page: options.page || USER_PAGINATION.DEFAULT_PAGE,
-  });
-
+  const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
-
-  // Validate search term length
-  if (searchTerm && searchTerm.length < USER_SEARCH.MIN_SEARCH_LENGTH) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Search term must be at least ${USER_SEARCH.MIN_SEARCH_LENGTH} characters long`
-    );
-  }
-
-  if (searchTerm && searchTerm.length > USER_SEARCH.MAX_SEARCH_LENGTH) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      `Search term cannot exceed ${USER_SEARCH.MAX_SEARCH_LENGTH} characters`
-    );
-  }
 
   const andConditions: Prisma.UserWhereInput[] = [
     {
-      deletionStatus: 'ACTIVE',
+      deletionStatus: DELETION_STATUS.ACTIVE,
     },
   ];
 
-  // Handle search term
   if (searchTerm) {
     andConditions.push({
-      OR: userSearchableFields.map(field => {
-        const [relation, fieldName] = field.split('.');
-        if (relation && fieldName) {
-          return {
-            [relation]: {
-              [fieldName]: {
-                contains: searchTerm,
-                mode: 'insensitive',
-              },
-            },
-          };
-        }
-        return {
-          [field]: {
+      OR: [
+        // Search in user fields
+        {
+          email: {
             contains: searchTerm,
             mode: 'insensitive',
           },
-        };
-      }),
+        },
+        // Search in customer fields
+        {
+          customer: {
+            OR: [
+              {
+                firstName: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                lastName: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                phone: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+        },
+        // Search in vendor fields
+        {
+          vendor: {
+            OR: [
+              {
+                businessName: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                businessEmail: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                businessPhone: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+        },
+        // Search in admin fields
+        {
+          admin: {
+            OR: [
+              {
+                firstName: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                lastName: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                phoneNumber: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+        },
+      ],
     });
   }
 
-  // Handle filters
   if (Object.keys(filterData).length > 0) {
-    const filterConditions = Object.entries(filterData).map(([key, value]) => {
-      if (userFilterableFields.includes(key)) {
-        // Handle date range filters
-        if (key === 'createdAt' || key === 'updatedAt' || key === 'lastLogin') {
-          const [startDate, endDate] = (value as string).split(',');
+    andConditions.push({
+      AND: Object.keys(filterData).map(key => {
+        if (userFilterableFields.includes(key)) {
+          // Handle date range filters
+          if (
+            key === 'createdAt' ||
+            key === 'updatedAt' ||
+            key === 'lastLogin'
+          ) {
+            const [startDate, endDate] = (filterData as any)[key].split(',');
+            return {
+              [key]: {
+                gte: startDate ? new Date(startDate) : undefined,
+                lte: endDate ? new Date(endDate) : undefined,
+              },
+            };
+          }
           return {
             [key]: {
-              gte: startDate ? new Date(startDate) : undefined,
-              lte: endDate ? new Date(endDate) : undefined,
+              equals: (filterData as any)[key],
             },
           };
         }
-        // Handle boolean filters
-        if (key === 'isEmailVerified' || key === 'isLocked') {
-          return {
-            [key]: value === 'true',
-          };
-        }
-        // Handle enum filters
-        if (key === 'role' || key === 'deletionStatus') {
-          return {
-            [key]: value,
-          };
-        }
-      }
-      return {};
+        return {};
+      }),
     });
-
-    if (filterConditions.length > 0) {
-      andConditions.push({
-        AND: filterConditions,
-      });
-    }
   }
 
   const whereConditions: Prisma.UserWhereInput =

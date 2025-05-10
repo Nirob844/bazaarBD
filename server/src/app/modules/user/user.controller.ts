@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
+import { paginationFields } from '../../../constants/pagination';
 import catchAsync from '../../../shared/catchAsync';
+import pick from '../../../shared/pick';
+import { userFilterableFields } from './user.constants';
 import { UserService } from './user.service';
 
 // Get all users
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUsers(req.query, req.query);
+  const filters = pick(req.query, userFilterableFields);
+  const options = pick(req.query, paginationFields);
+  const result = await UserService.getAllUsers(filters, options);
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Users retrieved successfully',
@@ -116,7 +121,15 @@ const updateEmail = catchAsync(async (req: Request, res: Response) => {
 
 // Search users
 const searchUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.searchUsers(req.query);
+  const { searchTerm } = req.query;
+  if (!searchTerm || typeof searchTerm !== 'string') {
+    res.status(httpStatus.BAD_REQUEST).json({
+      success: false,
+      message: 'Search term is required',
+    });
+    return;
+  }
+  const result = await UserService.searchUsers({ searchTerm });
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Users searched successfully',
@@ -126,7 +139,8 @@ const searchUsers = catchAsync(async (req: Request, res: Response) => {
 
 // Filter users
 const filterUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.filterUsers(req.query);
+  const filters = pick(req.query, userFilterableFields);
+  const result = await UserService.filterUsers(filters);
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Users filtered successfully',

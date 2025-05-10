@@ -25,6 +25,12 @@ export const userFilterableFields: string[] = [
 // Relational fields for user queries
 export const userRelationalFields: string[] = ['customer', 'vendor', 'admin'];
 
+export const userRelationalFieldsMapper: { [key: string]: string } = {
+  customerId: 'customer',
+  vendorId: 'vendor',
+  adminId: 'admin',
+};
+
 // Fields to include in user responses
 export const userProfileFields = {
   basic: {

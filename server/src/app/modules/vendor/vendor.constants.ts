@@ -3,17 +3,14 @@ export const vendorSearchableFields: string[] = [
   'businessEmail',
   'businessPhone',
   'taxId',
+  'user.email',
 ];
 
 export const vendorFilterableFields: string[] = [
   'searchTerm',
   'isVerified',
-  'hasActiveShops',
-  'deletionStatus',
-  'businessName',
-  'businessEmail',
-  'businessPhone',
-  'taxId',
+  'createdAt',
+  'updatedAt',
 ];
 
 export const vendorRelationalFields: string[] = [
@@ -43,51 +40,41 @@ export const vendorSortableFields: string[] = [
 
 // Fields that are included in the vendor profile
 export const vendorProfileFields = {
-  basic: {
+  user: {
     id: true,
-    businessName: true,
-    businessEmail: true,
-    businessPhone: true,
-    taxId: true,
-    isVerified: true,
+    email: true,
+    role: true,
+    isEmailVerified: true,
+    lastLogin: true,
     createdAt: true,
     updatedAt: true,
   },
-  analytics: {
-    totalSales: true,
-    totalOrders: true,
-    rating: true,
-  },
-  shops: {
-    id: true,
-    name: true,
-    isActive: true,
-    analytics: {
-      totalSales: true,
-      totalOrders: true,
-      totalProducts: true,
-      visitorCount: true,
-    },
-  },
-  products: {
-    id: true,
-    name: true,
-    basePrice: true,
-    salePrice: true,
-    stockStatus: true,
-    averageRating: true,
-    ratingCount: true,
-  },
-  bankAccounts: {
-    id: true,
-    bankName: true,
-    accountType: true,
-    isDefault: true,
-    isVerified: true,
-  },
-  user: {
-    email: true,
-    lastLogin: true,
-    isEmailVerified: true,
-  },
 };
+
+// Vendor constants
+export const VENDOR_CONSTANTS = {
+  DELETION_STATUS: {
+    ACTIVE: 'ACTIVE',
+    DELETED: 'DELETED',
+    ARCHIVED: 'ARCHIVED',
+  },
+  VERIFICATION_STATUS: {
+    PENDING: 'PENDING',
+    VERIFIED: 'VERIFIED',
+    REJECTED: 'REJECTED',
+  },
+  ACCOUNT_STATUS: {
+    ACTIVE: 'ACTIVE',
+    SUSPENDED: 'SUSPENDED',
+    BLOCKED: 'BLOCKED',
+  },
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 10,
+    MAX_LIMIT: 100,
+  },
+  SEARCH: {
+    MIN_SEARCH_LENGTH: 2,
+    MAX_SEARCH_LENGTH: 50,
+  },
+} as const;

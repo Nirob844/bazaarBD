@@ -9,7 +9,6 @@ import {
   CUSTOMER_CONSTANTS,
   customerFilterableFields,
   customerProfileFields,
-  customerSearchableFields,
 } from './customer.constants';
 import { ICustomerFilterRequest } from './customer.interface';
 
@@ -30,12 +29,36 @@ const getAllCustomers = async (
 
   if (searchTerm) {
     andConditions.push({
-      OR: customerSearchableFields.map(field => ({
-        [field]: {
-          contains: searchTerm,
-          mode: 'insensitive',
+      OR: [
+        // Search in customer fields
+        {
+          firstName: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
         },
-      })),
+        {
+          lastName: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          phone: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        // Search in user fields
+        {
+          user: {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ],
     });
   }
 
