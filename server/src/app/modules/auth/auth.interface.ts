@@ -13,6 +13,12 @@ export type IRefreshTokenResponse = {
 };
 
 export type IRegisterUser = {
+  phoneNumber: string;
+  designation: string;
+  department: string;
+  isActive: boolean;
+  permissions: JSON;
+  notes: string;
   email: string;
   password: string;
   role: UserRole;

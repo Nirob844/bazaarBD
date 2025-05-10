@@ -63,6 +63,9 @@ export const userProfileFields = {
   },
   admin: {
     id: true,
+    firstName: true,
+    lastName: true,
+    phoneNumber: true,
   },
 };
 

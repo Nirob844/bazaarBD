@@ -1,8 +1,5 @@
-import { comparePassword, getUserByEmail, hashPassword } from './auth.utils';
-
-import httpStatus from 'http-status';
-
 import { User } from '@prisma/client';
+import httpStatus from 'http-status';
 import { Secret } from 'jsonwebtoken';
 import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
@@ -10,15 +7,13 @@ import { jwtHelpers } from '../../../helpers/jwtHelpers';
 import prisma from '../../../shared/prisma';
 import { logger } from '../../../utils/logger';
 import { AdminAnalyticsService } from '../adminAnalytics/adminAnalytics.service';
-import { EmailType } from '../emailNotification/emailNotification.constant';
-import { sendTemplateEmail } from '../emailNotification/emailNotification.utils';
-import { verificationCodeService } from '../verificationCode/verificationCode.service';
 import { MAX_FAILED_ATTEMPTS } from './auth.constant';
 import {
   ILoginUser,
   ILoginUserResponse,
   IRegisterUser,
 } from './auth.interface';
+import { comparePassword, getUserByEmail, hashPassword } from './auth.utils';
 
 const registerUser = async (data: IRegisterUser): Promise<User> => {
   const { email, password, role } = data;
@@ -101,9 +96,19 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
         },
       });
     } else if (role === 'ADMIN') {
+      if (!data.firstName || !data.lastName) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'First name and last name are required for admin registration'
+        );
+      }
+
       await tx.admin.create({
         data: {
           userId: user.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
         },
       });
     } else {
@@ -139,17 +144,18 @@ const registerUser = async (data: IRegisterUser): Promise<User> => {
     await AdminAnalyticsService.updateAdminAnalytics();
   });
 
-  const code = await verificationCodeService.createVerificationCode(
-    createdUser!.id
-  );
+  // todo: send email verification code
+  // const code = await verificationCodeService.createVerificationCode(
+  //   createdUser!.id
+  // );
 
-  await sendTemplateEmail(EmailType.ACCOUNT_CONFIRMATION, {
-    userId: createdUser!.id,
-    toEmail: createdUser!.email,
-    templateData: {
-      code: code,
-    },
-  });
+  // await sendTemplateEmail(EmailType.ACCOUNT_CONFIRMATION, {
+  //   userId: createdUser!.id,
+  //   toEmail: createdUser!.email,
+  //   templateData: {
+  //     code: code,
+  //   },
+  // });
 
   return createdUser!;
 };
@@ -179,13 +185,13 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
       'Your account has been temporarily locked due to multiple failed login attempts. Please try again later or contact support for assistance.'
     );
   }
-
-  if (!user.isEmailVerified) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      'Please verify your email address before logging in. Check your inbox for the verification email.'
-    );
-  }
+  // todo: check if email is verified
+  // if (!user.isEmailVerified) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     'Please verify your email address before logging in. Check your inbox for the verification email.'
+  //   );
+  // }
 
   const passwordMatched = await comparePassword(password, user.password);
 
@@ -275,6 +281,14 @@ const createSuperAdmin = async (): Promise<void> => {
     await tx.admin.create({
       data: {
         userId: user.id,
+        firstName: 'Super',
+        lastName: 'Admin',
+        designation: 'SUPER_ADMIN',
+        department: 'ADMINISTRATION',
+        isActive: true,
+        permissions: {
+          all: true,
+        },
       },
     });
 

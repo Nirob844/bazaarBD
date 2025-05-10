@@ -193,6 +193,9 @@ const getSingleUser = async (id: string): Promise<User | null> => {
       admin: {
         select: {
           id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
         },
       },
     },
