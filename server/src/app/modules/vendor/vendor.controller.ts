@@ -42,7 +42,7 @@ const getSingleVendor = catchAsync(async (req: Request, res: Response) => {
 
 const getVendorProfile = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
-  const result = await VendorService.getVendorProfile(user?.id);
+  const result = await VendorService.getVendorProfile(user?.userId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -119,7 +119,7 @@ const getVendorsAnalytics = catchAsync(async (req: Request, res: Response) => {
 
 const getVendorAnalytics = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
-  const result = await VendorService.getVendorAnalytics(user?.id);
+  const result = await VendorService.getVendorAnalytics(user?.userId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -130,7 +130,7 @@ const getVendorAnalytics = catchAsync(async (req: Request, res: Response) => {
 
 const getVendorStats = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
-  const result = await VendorService.getVendorStats(user?.id);
+  const result = await VendorService.getVendorStats(user?.userId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -141,7 +141,10 @@ const getVendorStats = catchAsync(async (req: Request, res: Response) => {
 
 const updateVendorProfile = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
-  const result = await VendorService.updateVendorProfile(user?.id, req.body);
+  const result = await VendorService.updateVendorProfile(
+    user?.userId,
+    req.body
+  );
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -153,7 +156,7 @@ const updateVendorProfile = catchAsync(async (req: Request, res: Response) => {
 const getVendorBankAccounts = catchAsync(
   async (req: Request, res: Response) => {
     const { user } = req;
-    const result = await VendorService.getVendorBankAccounts(user?.id);
+    const result = await VendorService.getVendorBankAccounts(user?.userId);
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
@@ -165,7 +168,7 @@ const getVendorBankAccounts = catchAsync(
 
 const addBankAccount = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
-  const result = await VendorService.addBankAccount(user?.id, req.body);
+  const result = await VendorService.addBankAccount(user?.userId, req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -178,7 +181,7 @@ const updateBankAccount = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
   const { accountId } = req.params;
   const result = await VendorService.updateBankAccount(
-    user?.id,
+    user?.userId,
     accountId,
     req.body
   );
@@ -193,7 +196,7 @@ const updateBankAccount = catchAsync(async (req: Request, res: Response) => {
 const deleteBankAccount = catchAsync(async (req: Request, res: Response) => {
   const { user } = req;
   const { accountId } = req.params;
-  const result = await VendorService.deleteBankAccount(user?.id, accountId);
+  const result = await VendorService.deleteBankAccount(user?.userId, accountId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
