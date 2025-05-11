@@ -1,26 +1,36 @@
 import express from 'express';
-import { ENUM_USER_ROLE } from '../../../enums/user';
-import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
 import { PromotionController } from './promotion.controller';
+import { PromotionValidation } from './promotion.validation';
 
 const router = express.Router();
 
-router.get('/', PromotionController.getAllFromDB);
-router.get('/:id', PromotionController.getDataById);
 router.post(
   '/',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
+  validateRequest(PromotionValidation.createPromotionZodSchema),
   PromotionController.insertIntoDB
 );
+
+router.post(
+  '/bulk',
+  validateRequest(PromotionValidation.bulkCreatePromotionZodSchema),
+  PromotionController.bulkInsertIntoDB
+);
+
+router.get('/', PromotionController.getAllFromDB);
+
+router.get('/:id', PromotionController.getDataById);
+
+router.get('/product/:productId', PromotionController.getProductPromotions);
+
 router.patch(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
+  validateRequest(PromotionValidation.updatePromotionZodSchema),
   PromotionController.updateOneInDB
 );
-router.delete(
-  '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
-  PromotionController.deleteByIdFromDB
-);
+
+router.delete('/:id', PromotionController.deleteByIdFromDB);
+
+router.post('/:id/increment-uses', PromotionController.incrementPromotionUses);
 
 export const PromotionRoutes = router;

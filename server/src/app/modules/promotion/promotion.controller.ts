@@ -1,4 +1,3 @@
-import { Promotion } from '@prisma/client';
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import { paginationFields } from '../../../constants/pagination';
@@ -9,21 +8,43 @@ import { PromotionService } from './promotion.service';
 
 const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
   const result = await PromotionService.insertIntoDB(req.body);
-  sendResponse<Promotion>(res, {
+  sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Promotion Created!!',
+    message: 'Promotion created successfully',
+    data: result,
+  });
+});
+
+const bulkInsertIntoDB = catchAsync(async (req: Request, res: Response) => {
+  const result = await PromotionService.bulkInsertIntoDB(req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Promotions created successfully',
     data: result,
   });
 });
 
 const getAllFromDB = catchAsync(async (req: Request, res: Response) => {
-  const options = pick(req.query, paginationFields);
-  const result = await PromotionService.getAllFromDB(options);
+  const filters = pick(req.query, [
+    'productId',
+    'type',
+    'isActive',
+    'startDate',
+    'endDate',
+  ]);
+  const paginationOptions = pick(req.query, paginationFields);
+
+  const result = await PromotionService.getAllFromDB(
+    filters,
+    paginationOptions
+  );
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Promotion data fetched!!',
+    message: 'Promotions fetched successfully',
     meta: result.meta,
     data: result.data,
   });
@@ -34,14 +55,13 @@ const getDataById = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Promotion data fetched!!',
+    message: 'Promotion fetched successfully',
     data: result,
   });
 });
 
 const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await PromotionService.updateOneInDB(id, req.body);
+  const result = await PromotionService.updateOneInDB(req.params.id, req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -51,20 +71,46 @@ const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteByIdFromDB = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await PromotionService.deleteByIdFromDB(id);
+  const result = await PromotionService.deleteByIdFromDB(req.params.id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Promotion delete successfully',
+    message: 'Promotion deleted successfully',
     data: result,
   });
 });
 
+const getProductPromotions = catchAsync(async (req: Request, res: Response) => {
+  const result = await PromotionService.getProductPromotions(
+    req.params.productId
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product promotions fetched successfully',
+    data: result,
+  });
+});
+
+const incrementPromotionUses = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PromotionService.incrementPromotionUses(req.params.id);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Promotion usage incremented successfully',
+      data: result,
+    });
+  }
+);
+
 export const PromotionController = {
   insertIntoDB,
+  bulkInsertIntoDB,
   getAllFromDB,
   getDataById,
   updateOneInDB,
   deleteByIdFromDB,
+  getProductPromotions,
+  incrementPromotionUses,
 };
