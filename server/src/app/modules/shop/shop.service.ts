@@ -8,96 +8,80 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IUploadFilesMap } from '../../../interfaces/file';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
-import { shopSearchAbleFields } from './shop.constants';
+import { SHOP_CONSTANTS, shopFilterAbleFields } from './shop.constants';
 import { IShopFilterRequest } from './shop.interface';
 
 const insertIntoDB = async (req: Request): Promise<Shop> => {
-  try {
-    const files = req.files as IUploadFilesMap;
-    const data = JSON.parse(req.body.data);
+  const files = req.files as IUploadFilesMap;
 
-    // Validate required fields
-    if (
-      !data.name ||
-      !data.address ||
-      !data.contactEmail ||
-      !data.contactPhone
-    ) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Missing required fields: name, address, contactEmail, contactPhone'
-      );
-    }
+  const data = req.body;
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.contactEmail)) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid email format');
-    }
-
-    // Validate phone format (basic validation)
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
-    if (!phoneRegex.test(data.contactPhone)) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid phone number format');
-    }
-
-    // Handle banner upload
-    if (files?.banner?.[0]) {
-      const bannerUpload = await FileUploadHelper.uploadToCloudinary(
-        files.banner[0]
-      );
-      data.banner = bannerUpload?.secure_url;
-    }
-
-    // Handle logo upload
-    if (files?.logo?.[0]) {
-      const logoUpload = await FileUploadHelper.uploadToCloudinary(
-        files.logo[0]
-      );
-      data.logo = logoUpload?.secure_url;
-    }
-
-    // Generate slug from name
-    data.slug = data.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-
-    // Check if shop with same name or slug exists
-    const existingShop = await prisma.shop.findFirst({
-      where: {
-        OR: [
-          { name: data.name },
-          { slug: data.slug },
-          { contactEmail: data.contactEmail },
-        ],
-      },
-    });
-
-    if (existingShop) {
-      throw new ApiError(
-        httpStatus.CONFLICT,
-        'Shop with this name, slug, or email already exists'
-      );
-    }
-
-    const result = await prisma.shop.create({
-      data,
-      include: {
-        vendor: true,
-      },
-    });
-
-    return result;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
+  // Validate required fields
+  if (!data.name || !data.address || !data.contactEmail || !data.contactPhone) {
     throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to create shop'
+      httpStatus.BAD_REQUEST,
+      'Missing required fields: name, address, contactEmail, contactPhone'
     );
   }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(data.contactEmail)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid email format');
+  }
+
+  // Validate phone format (basic validation)
+  const phoneRegex = /^\+?[\d\s-]{10,}$/;
+  if (!phoneRegex.test(data.contactPhone)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid phone number format');
+  }
+
+  // Handle banner upload
+  if (files?.banner?.[0]) {
+    const bannerUpload = await FileUploadHelper.uploadToCloudinary(
+      files.banner[0]
+    );
+    data.banner = bannerUpload?.secure_url;
+  }
+
+  // Handle logo upload
+  if (files?.logo?.[0]) {
+    const logoUpload = await FileUploadHelper.uploadToCloudinary(files.logo[0]);
+    data.logo = logoUpload?.secure_url;
+  }
+
+  // Generate slug from name
+  data.slug = data.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+  // Check if shop with same name or slug exists
+  const existingShop = await prisma.shop.findFirst({
+    where: {
+      OR: [
+        { name: data.name },
+        { slug: data.slug },
+        { contactEmail: data.contactEmail },
+      ],
+    },
+  });
+
+  if (existingShop) {
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      'Shop with this name, slug, or email already exists'
+    );
+  }
+
+  const result = await prisma.shop.create({
+    data,
+    include: {
+      vendor: true,
+    },
+  });
+  console.log('shop create result', result);
+  return result;
 };
 
 const getAllFromDB = async (
@@ -109,26 +93,114 @@ const getAllFromDB = async (
       paginationHelpers.calculatePagination(options);
     const { searchTerm, ...filterData } = filters;
 
-    const andConditions = [];
+    const andConditions: Prisma.ShopWhereInput[] = [
+      {
+        deletionStatus: SHOP_CONSTANTS.DELETION_STATUS.ACTIVE,
+      },
+    ];
 
+    // Handle search term
     if (searchTerm) {
       andConditions.push({
-        OR: shopSearchAbleFields.map(field => ({
-          [field]: {
-            contains: searchTerm,
-            mode: 'insensitive',
+        OR: [
+          // Search in shop fields
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
           },
-        })),
+          {
+            slug: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            address: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            contactEmail: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            contactPhone: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          // Search in vendor fields
+          {
+            vendor: {
+              OR: [
+                {
+                  businessName: {
+                    contains: searchTerm,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  businessEmail: {
+                    contains: searchTerm,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            },
+          },
+        ],
       });
     }
 
+    // Handle filters
     if (Object.keys(filterData).length > 0) {
       andConditions.push({
-        AND: Object.keys(filterData).map(key => ({
-          [key]: {
-            equals: (filterData as any)[key],
-          },
-        })),
+        AND: Object.keys(filterData).map(key => {
+          if (shopFilterAbleFields.includes(key)) {
+            // Handle date range filters
+            if (key === 'createdAt' || key === 'updatedAt') {
+              const [startDate, endDate] = (filterData as any)[key].split(',');
+              return {
+                [key]: {
+                  gte: startDate ? new Date(startDate) : undefined,
+                  lte: endDate ? new Date(endDate) : undefined,
+                },
+              };
+            }
+            // Handle boolean filters
+            if (key === 'isActive') {
+              return {
+                [key]: (filterData as any)[key] === 'true',
+              };
+            }
+            // Handle vendor relation
+            if (key === 'vendorId') {
+              return {
+                vendor: {
+                  id: (filterData as any)[key],
+                },
+              };
+            }
+            // Handle other filters
+            return {
+              [key]: {
+                equals: (filterData as any)[key],
+              },
+            };
+          }
+          return {};
+        }),
       });
     }
 
@@ -152,6 +224,15 @@ const getAllFromDB = async (
             businessName: true,
             businessEmail: true,
             businessPhone: true,
+            isVerified: true,
+          },
+        },
+        analytics: {
+          select: {
+            totalSales: true,
+            totalProducts: true,
+            totalOrders: true,
+            visitorCount: true,
           },
         },
       },
@@ -170,6 +251,7 @@ const getAllFromDB = async (
       data: result,
     };
   } catch (error) {
+    console.error('Shop fetch error:', error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       'Failed to fetch shops'
@@ -566,6 +648,7 @@ const getShopTimeStats = async (
   shopId: string,
   period: 'daily' | 'weekly' | 'monthly'
 ) => {
+  // Get shop details
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
     select: {
@@ -578,17 +661,6 @@ const getShopTimeStats = async (
           visitorCount: true,
         },
       },
-      products: {
-        select: {
-          id: true,
-          name: true,
-          basePrice: true,
-          salePrice: true,
-          stockStatus: true,
-          averageRating: true,
-          ratingCount: true,
-        },
-      },
     },
   });
 
@@ -596,9 +668,10 @@ const getShopTimeStats = async (
     throw new ApiError(httpStatus.NOT_FOUND, 'Shop not found');
   }
 
-  // Calculate time-based statistics
+  // Calculate time range
   const now = new Date();
   let startDate: Date;
+  const endDate = new Date();
 
   switch (period) {
     case 'daily':
@@ -626,27 +699,73 @@ const getShopTimeStats = async (
       },
       placedAt: {
         gte: startDate,
+        lte: endDate,
+      },
+      status: {
+        not: 'CANCELLED',
       },
     },
     select: {
+      id: true,
       total: true,
-      placedAt: true,
       status: true,
+      placedAt: true,
+      items: {
+        select: {
+          quantity: true,
+          product: {
+            select: {
+              name: true,
+              images: true,
+              basePrice: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      placedAt: 'desc',
     },
   });
 
   // Calculate statistics
   const stats = {
     period,
+    timeRange: {
+      start: startDate,
+      end: endDate,
+    },
     totalSales: orders.reduce((sum, order) => sum + Number(order.total), 0),
     totalOrders: orders.length,
     completedOrders: orders.filter(order => order.status === 'COMPLETED')
+      .length,
+    cancelledOrders: orders.filter(order => order.status === 'CANCELLED')
       .length,
     averageOrderValue:
       orders.length > 0
         ? orders.reduce((sum, order) => sum + Number(order.total), 0) /
           orders.length
         : 0,
+    topSellingProducts: Object.values(
+      orders
+        .flatMap(order => order.items)
+        .reduce((acc, item) => {
+          const key = item.product.name;
+          if (!acc[key]) {
+            acc[key] = {
+              name: item.product.name,
+              image: item.product.images[0]?.url || '',
+              quantity: 0,
+              revenue: 0,
+            };
+          }
+          acc[key].quantity += item.quantity;
+          acc[key].revenue += item.quantity * Number(item.product.basePrice);
+          return acc;
+        }, {} as Record<string, { name: string; image: string; quantity: number; revenue: number }>)
+    )
+      .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+      .slice(0, 5),
   };
 
   return {
@@ -656,6 +775,7 @@ const getShopTimeStats = async (
 };
 
 const updateShopVerification = async (shopId: string, isVerified: boolean) => {
+  // Get shop with vendor details
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
     include: {
@@ -667,16 +787,38 @@ const updateShopVerification = async (shopId: string, isVerified: boolean) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Shop not found');
   }
 
+  // Update vendor verification status
   const result = await prisma.vendor.update({
     where: { id: shop.vendorId },
-    data: { isVerified },
+    data: {
+      isVerified,
+      verificationDocuments: {
+        status: isVerified ? 'VERIFIED' : 'UNVERIFIED',
+        verifiedAt: isVerified ? new Date() : null,
+        verifiedBy: isVerified ? 'ADMIN' : null,
+        notes: isVerified
+          ? 'Verified by admin'
+          : 'Verification revoked by admin',
+      },
+    },
     select: {
       id: true,
       businessName: true,
       isVerified: true,
+      verificationDocuments: true,
       updatedAt: true,
     },
   });
+
+  // If verification is revoked, update shop status
+  if (!isVerified) {
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        isActive: false,
+      },
+    });
+  }
 
   return result;
 };
@@ -684,6 +826,7 @@ const updateShopVerification = async (shopId: string, isVerified: boolean) => {
 const getShopReviews = async (shopId: string, options: IPaginationOptions) => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
+  // Get shop reviews with customer and product details
   const result = await prisma.review.findMany({
     where: {
       product: {
@@ -704,6 +847,7 @@ const getShopReviews = async (shopId: string, options: IPaginationOptions) => {
       createdAt: true,
       customer: {
         select: {
+          id: true,
           firstName: true,
           lastName: true,
           avatar: true,
@@ -714,11 +858,14 @@ const getShopReviews = async (shopId: string, options: IPaginationOptions) => {
           id: true,
           name: true,
           images: true,
+          basePrice: true,
+          salePrice: true,
         },
       },
     },
   });
 
+  // Get total count for pagination
   const total = await prisma.review.count({
     where: {
       product: {
@@ -728,11 +875,25 @@ const getShopReviews = async (shopId: string, options: IPaginationOptions) => {
     },
   });
 
+  // Calculate average rating
+  const averageRating = await prisma.review.aggregate({
+    where: {
+      product: {
+        shopId: shopId,
+      },
+      isApproved: true,
+    },
+    _avg: {
+      rating: true,
+    },
+  });
+
   return {
     meta: {
       total,
       page,
       limit,
+      averageRating: averageRating._avg?.rating || 0,
     },
     data: result,
   };

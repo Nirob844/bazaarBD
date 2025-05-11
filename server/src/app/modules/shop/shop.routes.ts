@@ -8,12 +8,19 @@ const router = express.Router();
 
 // Public routes
 router.get('/', ShopController.getAllFromDB);
+router.get('/featured', ShopController.getFeaturedShops);
+router.get('/search', ShopController.getAllFromDB);
+router.get('/filter/active', ShopController.getAllFromDB);
+router.get('/filter/verified', ShopController.getAllFromDB);
+
+// Shop specific public routes
 router.get('/:id', ShopController.getDataById);
 router.get('/:id/products', ShopController.getShopProducts);
-router.get('/featured', ShopController.getFeaturedShops);
 router.get('/:id/analytics', ShopController.getShopAnalytics);
+router.get('/:id/reviews', ShopController.getShopReviews);
+router.get('/:id/stats', ShopController.getShopTimeStats);
 
-// Protected routes
+// Protected routes - Vendor & Admin
 router.post(
   '/',
   auth(ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
@@ -33,17 +40,11 @@ router.patch(
   ShopController.updateOneInDB
 );
 
+// Admin only routes
 router.delete(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN),
+  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
   ShopController.deleteByIdFromDB
-);
-
-// Vendor specific routes
-router.get(
-  '/vendor/dashboard',
-  auth(ENUM_USER_ROLE.VENDOR),
-  ShopController.getVendorDashboard
 );
 
 router.patch(
@@ -52,9 +53,22 @@ router.patch(
   ShopController.updateShopStatus
 );
 
+router.patch(
+  '/:id/verify',
+  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
+  ShopController.updateShopVerification
+);
+
+// Vendor specific routes
+router.get(
+  '/vendor/dashboard',
+  auth(ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
+  ShopController.getVendorDashboard
+);
+
 router.get(
   '/vendor/stats',
-  auth(ENUM_USER_ROLE.VENDOR),
+  auth(ENUM_USER_ROLE.VENDOR, ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN),
   ShopController.getVendorStats
 );
 
