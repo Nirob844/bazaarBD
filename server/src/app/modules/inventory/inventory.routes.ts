@@ -1,26 +1,40 @@
 import express from 'express';
-import { ENUM_USER_ROLE } from '../../../enums/user';
-import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
 import { InventoryController } from './inventory.controller';
+import { InventoryValidation } from './inventory.validation';
 
 const router = express.Router();
 
-router.get('/', InventoryController.getAllFromDB);
-router.get('/:id', InventoryController.getDataById);
 router.post(
   '/',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.VENDOR),
+  validateRequest(InventoryValidation.createInventoryZodSchema),
   InventoryController.insertIntoDB
 );
+
+router.get('/', InventoryController.getAllFromDB);
+
+router.get('/summary', InventoryController.getInventorySummary);
+
+router.get('/:id', InventoryController.getDataById);
+
 router.patch(
   '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.VENDOR),
+  validateRequest(InventoryValidation.updateInventoryZodSchema),
   InventoryController.updateOneInDB
 );
-router.delete(
-  '/:id',
-  auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.VENDOR),
-  InventoryController.deleteByIdFromDB
+
+router.delete('/:id', InventoryController.deleteByIdFromDB);
+
+router.post(
+  '/:id/reserve',
+  validateRequest(InventoryValidation.reserveStockZodSchema),
+  InventoryController.reserveStock
+);
+
+router.post(
+  '/:id/release',
+  validateRequest(InventoryValidation.releaseStockZodSchema),
+  InventoryController.releaseStock
 );
 
 export const InventoryRoutes = router;

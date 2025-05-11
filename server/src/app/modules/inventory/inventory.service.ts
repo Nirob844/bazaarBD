@@ -3,36 +3,124 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
+import { InventoryHistoryService } from '../inventory-history/inventory-history.service';
 
-const insertIntoDB = async (data: Inventory): Promise<Inventory> => {
-  const { productId, stock } = data;
-  const inventory = await prisma.inventory.create({
+const insertIntoDB = async (data: {
+  productId: string;
+  variantId?: string;
+  sku: string;
+  barcode?: string;
+  location?: string;
+  batchNumber?: string;
+  expiryDate?: Date;
+  costPrice: number;
+  sellingPrice: number;
+  stock: number;
+  reservedStock?: number;
+  reorderPoint?: number;
+  reorderQuantity?: number;
+  notes?: string;
+}): Promise<Inventory> => {
+  const result = await prisma.inventory.create({
     data: {
-      productId,
-      stock,
-      history: {
-        create: {
-          action: 'PURCHASE',
-          quantityChange: stock,
-          previousStock: 0,
-          newStock: stock,
-        },
-      },
+      ...data,
+      availableStock: data.stock - (data.reservedStock || 0),
     },
     include: {
-      history: true,
+      product: true,
+      variant: true,
     },
   });
 
-  return inventory;
+  // Create initial history record
+  await InventoryHistoryService.insertIntoDB({
+    inventoryId: result.id,
+    action: 'ADJUSTMENT',
+    quantityChange: data.stock,
+    notes: 'Initial stock',
+  });
+
+  return result;
 };
 
 const getAllFromDB = async (
+  filters: any,
   options: IPaginationOptions
 ): Promise<IGenericResponse<Inventory[]>> => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+  const { searchTerm, productId, variantId, location, lowStock } = filters;
 
   const andConditions: Prisma.InventoryWhereInput[] = [];
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          product: {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          product: {
+            sku: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          variant: {
+            sku: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  if (productId) {
+    andConditions.push({ productId });
+  }
+
+  if (variantId) {
+    andConditions.push({ variantId });
+  }
+
+  if (location) {
+    andConditions.push({ location });
+  }
+
+  if (lowStock === 'true') {
+    // For low stock items, we'll first get all items with reorderPoint
+    const lowStockItems = await prisma.inventory.findMany({
+      where: {
+        reorderPoint: {
+          not: null,
+        },
+      },
+      select: {
+        id: true,
+        stock: true,
+        reorderPoint: true,
+      },
+    });
+
+    // Then filter items where stock <= reorderPoint
+    const lowStockIds = lowStockItems
+      .filter(item => item.stock <= (item.reorderPoint || 0))
+      .map(item => item.id);
+
+    andConditions.push({
+      id: {
+        in: lowStockIds,
+      },
+    });
+  }
 
   const whereConditions: Prisma.InventoryWhereInput =
     andConditions.length > 0 ? { AND: andConditions } : {};
@@ -41,20 +129,15 @@ const getAllFromDB = async (
     where: whereConditions,
     skip,
     take: limit,
-    include: {
-      product: {
-        select: {
-          name: true,
-        },
-      },
+    orderBy: {
+      createdAt: 'desc',
     },
-    // orderBy:
-    //   options.sortBy && options.sortOrder
-    //     ? { [options.sortBy]: options.sortOrder }
-    //     : {
-    //         createdAt: 'desc',
-    //       },
+    include: {
+      product: true,
+      variant: true,
+    },
   });
+
   const total = await prisma.inventory.count({
     where: whereConditions,
   });
@@ -71,12 +154,10 @@ const getAllFromDB = async (
 
 const getDataById = async (id: string): Promise<Inventory | null> => {
   const result = await prisma.inventory.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       product: true,
-      history: true,
+      variant: true,
     },
   });
 
@@ -87,49 +168,183 @@ const updateOneInDB = async (
   id: string,
   payload: Partial<Inventory>
 ): Promise<Inventory> => {
-  const existingInventory = await prisma.inventory.findUnique({
+  const inventory = await prisma.inventory.findUnique({
     where: { id },
   });
 
-  if (!existingInventory) throw new Error('Inventory not found!');
+  if (!inventory) {
+    throw new Error('Inventory not found');
+  }
 
-  if (payload.stock !== undefined) {
-    if (payload.stock < 0) throw new Error('Stock cannot be negative!');
-
-    await prisma.inventory.update({
-      where: { id },
-      data: {
-        stock: {
-          increment: payload.stock, // Adds new stock safely
-        },
-        history: {
-          create: {
-            action: 'PURCHASE',
-            quantityChange: payload.stock,
-            previousStock: existingInventory.stock,
-            newStock: existingInventory.stock + payload.stock,
-          },
-        },
-      },
+  // If stock is being updated, create a history record
+  if (payload.stock !== undefined && payload.stock !== inventory.stock) {
+    const quantityChange = payload.stock - inventory.stock;
+    await InventoryHistoryService.insertIntoDB({
+      inventoryId: id,
+      action: 'ADJUSTMENT',
+      quantityChange,
+      notes: 'Manual stock adjustment',
     });
   }
 
-  return prisma.inventory.findUnique({
+  const result = await prisma.inventory.update({
     where: { id },
-    include: { history: true },
-  }) as Promise<Inventory>;
+    data: {
+      ...payload,
+      availableStock:
+        payload.stock !== undefined
+          ? payload.stock - (payload.reservedStock || inventory.reservedStock)
+          : undefined,
+    },
+    include: {
+      product: true,
+      variant: true,
+    },
+  });
+
+  return result;
 };
 
 const deleteByIdFromDB = async (id: string): Promise<Inventory> => {
-  const existingInventory = await prisma.inventory.findUnique({
+  const result = await prisma.inventory.delete({
+    where: { id },
+    include: {
+      product: true,
+      variant: true,
+    },
+  });
+
+  return result;
+};
+
+const reserveStock = async (
+  id: string,
+  quantity: number
+): Promise<Inventory> => {
+  const inventory = await prisma.inventory.findUnique({
     where: { id },
   });
 
-  if (!existingInventory) throw new Error('Inventory not found!');
+  if (!inventory) {
+    throw new Error('Inventory not found');
+  }
 
-  await prisma.inventoryHistory.deleteMany({ where: { inventoryId: id } });
+  if (inventory.availableStock < quantity) {
+    throw new Error('Insufficient stock available');
+  }
 
-  return prisma.inventory.delete({ where: { id } });
+  const result = await prisma.inventory.update({
+    where: { id },
+    data: {
+      reservedStock: {
+        increment: quantity,
+      },
+      availableStock: {
+        decrement: quantity,
+      },
+    },
+    include: {
+      product: true,
+      variant: true,
+    },
+  });
+
+  return result;
+};
+
+const releaseStock = async (
+  id: string,
+  quantity: number
+): Promise<Inventory> => {
+  const inventory = await prisma.inventory.findUnique({
+    where: { id },
+  });
+
+  if (!inventory) {
+    throw new Error('Inventory not found');
+  }
+
+  if (inventory.reservedStock < quantity) {
+    throw new Error('Insufficient reserved stock');
+  }
+
+  const result = await prisma.inventory.update({
+    where: { id },
+    data: {
+      reservedStock: {
+        decrement: quantity,
+      },
+      availableStock: {
+        increment: quantity,
+      },
+    },
+    include: {
+      product: true,
+      variant: true,
+    },
+  });
+
+  return result;
+};
+
+const getInventorySummary = async () => {
+  const totalProducts = await prisma.inventory.count({
+    where: { variantId: null },
+  });
+
+  const totalVariants = await prisma.inventory.count({
+    where: { variantId: { not: null } },
+  });
+
+  // For low stock items, we'll use the same approach as in getAllFromDB
+  const lowStockItems = await prisma.inventory.findMany({
+    where: {
+      reorderPoint: {
+        not: null,
+      },
+    },
+    select: {
+      id: true,
+      stock: true,
+      reorderPoint: true,
+    },
+  });
+
+  const lowStockCount = lowStockItems.filter(
+    item => item.stock <= (item.reorderPoint || 0)
+  ).length;
+
+  const outOfStockItems = await prisma.inventory.count({
+    where: {
+      stock: 0,
+    },
+  });
+
+  // Get total stock value by joining with product to get cost price
+  const inventoryWithCost = await prisma.inventory.findMany({
+    select: {
+      stock: true,
+      product: {
+        select: {
+          costPrice: true,
+        },
+      },
+    },
+  });
+
+  const totalStockValue = inventoryWithCost.reduce((sum, item) => {
+    const stock = Number(item.stock) || 0;
+    const costPrice = Number(item.product.costPrice) || 0;
+    return sum + stock * costPrice;
+  }, 0);
+
+  return {
+    totalProducts,
+    totalVariants,
+    lowStockItems: lowStockCount,
+    outOfStockItems,
+    totalStockValue,
+  };
 };
 
 export const InventoryService = {
@@ -138,4 +353,7 @@ export const InventoryService = {
   getDataById,
   updateOneInDB,
   deleteByIdFromDB,
+  reserveStock,
+  releaseStock,
+  getInventorySummary,
 };

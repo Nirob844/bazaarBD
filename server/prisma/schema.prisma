@@ -75,6 +75,7 @@ model Vendor {
   businessPhone         String           @db.VarChar(20)
   taxId                 String?
   isVerified            Boolean          @default(false)
+  imageUrl              String?
   verificationDocuments Json? // Stores document URLs for verification
   user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   shops                 Shop[]
@@ -208,6 +209,54 @@ enum AddressType {
   OTHER
 }
 
+// Category model
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @db.VarChar(100)
+  slug        String  @unique
+  description String? @db.Text
+  imageUrl    String?
+
+  // Hierarchy
+  parentId   String?
+  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children   Category[] @relation("CategoryHierarchy")
+  level      Int        @default(0)
+  path       String[] // Array of category IDs in the hierarchy
+  breadcrumb String[] // Array of category names in the hierarchy
+
+  // SEO
+  metaTitle       String? @db.VarChar(100)
+  metaDescription String? @db.VarChar(255)
+  metaKeywords    String? @db.VarChar(255)
+  canonicalUrl    String? @db.VarChar(255)
+  seoScore        Int?    @default(0)
+
+  // Display
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+  showInMenu   Boolean @default(true)
+  showInFooter Boolean @default(false)
+  menuPosition String? @db.VarChar(50) // e.g., "main", "footer", "sidebar"
+  icon         String? @db.VarChar(50) // Icon class or URL
+  color        String? @db.VarChar(20) // Category color code
+
+  // Analytics
+  productCount Int      @default(0)
+  viewCount    Int      @default(0)
+  lastUpdated  DateTime @updatedAt
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@index([parentId, level])
+  @@index([slug, isActive])
+  @@index([displayOrder])
+  @@index([menuPosition])
+}
+
 // Product model
 model Product {
   id               String  @id @default(uuid())
@@ -323,54 +372,6 @@ model ProductImage {
   @@index([productId])
 }
 
-// Category model
-model Category {
-  id          String  @id @default(uuid())
-  name        String  @db.VarChar(100)
-  slug        String  @unique
-  description String? @db.Text
-  imageUrl    String?
-
-  // Hierarchy
-  parentId   String?
-  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children   Category[] @relation("CategoryHierarchy")
-  level      Int        @default(0)
-  path       String[] // Array of category IDs in the hierarchy
-  breadcrumb String[] // Array of category names in the hierarchy
-
-  // SEO
-  metaTitle       String? @db.VarChar(100)
-  metaDescription String? @db.VarChar(255)
-  metaKeywords    String? @db.VarChar(255)
-  canonicalUrl    String? @db.VarChar(255)
-  seoScore        Int?    @default(0)
-
-  // Display
-  displayOrder Int     @default(0)
-  isActive     Boolean @default(true)
-  showInMenu   Boolean @default(true)
-  showInFooter Boolean @default(false)
-  menuPosition String? @db.VarChar(50) // e.g., "main", "footer", "sidebar"
-  icon         String? @db.VarChar(50) // Icon class or URL
-  color        String? @db.VarChar(20) // Category color code
-
-  // Analytics
-  productCount Int      @default(0)
-  viewCount    Int      @default(0)
-  lastUpdated  DateTime @updatedAt
-
-  // Timestamps
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  products  Product[]
-
-  @@index([parentId, level])
-  @@index([slug, isActive])
-  @@index([displayOrder])
-  @@index([menuPosition])
-}
-
 // Inventory model with variant support
 model Inventory {
   id          String  @id @default(uuid())
@@ -443,33 +444,6 @@ enum ActionType {
   TRANSFER
 }
 
-model Promotion {
-  id            String        @id @default(uuid())
-  productId     String
-  type          PromotionType
-  discountValue Decimal
-  isPercentage  Boolean       @default(true)
-  startDate     DateTime
-  endDate       DateTime
-  isActive      Boolean       @default(true)
-  maxUses       Int?
-  currentUses   Int           @default(0)
-  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([productId, isActive, endDate])
-}
-
-enum PromotionType {
-  FLASH_SALE
-  SEASONAL
-  CLEARANCE
-  BUNDLE
-  LOYALTY
-}
-
-// ProductAttribute with standardized values
 model ProductAttribute {
   id           String    @id @default(uuid())
   productId    String
@@ -589,6 +563,32 @@ model ProductTag {
   id       String    @id @default(uuid())
   name     String    @unique @db.VarChar(50)
   products Product[]
+}
+
+model Promotion {
+  id            String        @id @default(uuid())
+  productId     String
+  type          PromotionType
+  discountValue Decimal
+  isPercentage  Boolean       @default(true)
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean       @default(true)
+  maxUses       Int?
+  currentUses   Int           @default(0)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([productId, isActive, endDate])
+}
+
+enum PromotionType {
+  FLASH_SALE
+  SEASONAL
+  CLEARANCE
+  BUNDLE
+  LOYALTY
 }
 
 model Review {
