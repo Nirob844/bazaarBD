@@ -1,46 +1,55 @@
-import { Inventory, Prisma } from '@prisma/client';
+import { Inventory, Prisma, PrismaClient } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 import { InventoryHistoryService } from '../inventory-history/inventory-history.service';
 
-const insertIntoDB = async (data: {
-  productId: string;
-  variantId?: string;
-  sku: string;
-  barcode?: string;
-  location?: string;
-  batchNumber?: string;
-  expiryDate?: Date;
-  costPrice: number;
-  sellingPrice: number;
-  stock: number;
-  reservedStock?: number;
-  reorderPoint?: number;
-  reorderQuantity?: number;
-  notes?: string;
-}): Promise<Inventory> => {
-  const result = await prisma.inventory.create({
+const insertIntoDB = async (
+  tx: PrismaClient | typeof prisma,
+  data: {
+    productId: string;
+    stock: number;
+    lowStockThreshold?: number;
+    reorderPoint?: number;
+    reorderQuantity?: number;
+    location?: string;
+    binNumber?: string;
+    warehouseId?: string;
+    availableStock: number;
+    reservedStock: number;
+  }
+) => {
+  console.log(data, 'data');
+  const inventory = await tx.inventory.create({
     data: {
-      ...data,
-      availableStock: data.stock - (data.reservedStock || 0),
-    },
-    include: {
-      product: true,
-      variant: true,
+      productId: data.productId,
+      stock: data.stock,
+      lowStockThreshold: data.lowStockThreshold ?? 5,
+      reorderPoint: data.reorderPoint,
+      reorderQuantity: data.reorderQuantity,
+      location: data.location,
+      binNumber: data.binNumber,
+      warehouseId: data.warehouseId,
+      availableStock: data.availableStock,
+      reservedStock: data.reservedStock,
     },
   });
 
-  // Create initial history record
-  await InventoryHistoryService.insertIntoDB({
-    inventoryId: result.id,
-    action: 'ADJUSTMENT',
-    quantityChange: data.stock,
-    notes: 'Initial stock',
+  // Create initial inventory history
+  await tx.inventoryHistory.create({
+    data: {
+      inventoryId: inventory.id,
+      action: 'ADJUSTMENT',
+      quantityChange: data.stock,
+      previousStock: 0,
+      newStock: data.stock,
+      referenceType: 'INITIAL_STOCK',
+      notes: 'Initial stock setup',
+    },
   });
 
-  return result;
+  return inventory;
 };
 
 const getAllFromDB = async (

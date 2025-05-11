@@ -2,29 +2,16 @@ import { Product, ProductVariant, Promotion } from '@prisma/client';
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import { paginationFields } from '../../../constants/pagination';
+import { getUploadedFiles } from '../../../helpers/uploadFile';
 import catchAsync from '../../../shared/catchAsync';
 import pick from '../../../shared/pick';
 import sendResponse from '../../../shared/sendResponse';
 import { ProductService } from './product.service';
-import { MulterFile } from './product.types';
-
-// Helper function to handle file uploads
-const getUploadedFiles = (files: any): MulterFile[] | undefined => {
-  if (!files) return undefined;
-  if (Array.isArray(files)) {
-    return files as MulterFile[];
-  }
-  // If files is an object with fieldname keys, take the first array of files
-  const firstFieldFiles = Object.values(files)[0];
-  return Array.isArray(firstFieldFiles)
-    ? (firstFieldFiles as MulterFile[])
-    : undefined;
-};
 
 const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
   const result = await ProductService.insertIntoDB(
     req.body,
-    getUploadedFiles(req.files)
+    getUploadedFiles(req.files) as any
   );
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -37,20 +24,24 @@ const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
 const getAllFromDB = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, [
     'searchTerm',
-    'name',
     'categoryId',
     'vendorId',
     'shopId',
     'status',
-    'stockStatus',
-    'featured',
-    'bestSeller',
-    'newArrival',
+    'type',
+    'isActive',
+    'isVisible',
+    'isFeatured',
+    'isNew',
+    'isBestSeller',
     'minPrice',
     'maxPrice',
+    'tags',
   ]);
   const paginationOptions = pick(req.query, paginationFields);
+
   const result = await ProductService.getAllFromDB(filters, paginationOptions);
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -122,7 +113,7 @@ const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
   const result = await ProductService.updateOneInDB(
     req.params.id,
     req.body,
-    getUploadedFiles(req.files)
+    getUploadedFiles(req.files) as any
   );
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -133,27 +124,19 @@ const updateOneInDB = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteByIdFromDB = catchAsync(async (req: Request, res: Response) => {
-  try {
-    const result = await ProductService.deleteByIdFromDB(req.params.id);
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: 'Product and all related data deleted successfully',
-      data: result,
-    });
-  } catch (error: any) {
-    sendResponse(res, {
-      statusCode: error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      success: false,
-      message: error.message || 'Failed to delete product',
-    });
-  }
+  const result = await ProductService.deleteByIdFromDB(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product deleted successfully',
+    data: result,
+  });
 });
 
 const bulkCreate = catchAsync(async (req: Request, res: Response) => {
   const result = await ProductService.bulkCreate(
     req.body.products,
-    getUploadedFiles(req.files)
+    getUploadedFiles(req.files) as any
   );
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -385,6 +368,51 @@ const getPromotionDetails = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getProductBySlug = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductService.getProductBySlug(req.params.slug);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product fetched successfully',
+    data: result,
+  });
+});
+
+const getRelatedProducts = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductService.getRelatedProducts(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Related products fetched successfully',
+    data: result,
+  });
+});
+
+const getProductReviews = catchAsync(async (req: Request, res: Response) => {
+  const filters = pick(req.query, ['rating', 'verified']);
+  //const paginationOptions = pick(req.query, paginationFields);
+
+  const result = await ProductService.getProductReviews(req.params.id, filters);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product reviews fetched successfully',
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getProductAnalytics = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductService.getProductAnalytics(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Product analytics fetched successfully',
+    data: result,
+  });
+});
+
 export const ProductController = {
   insertIntoDB,
   getAllFromDB,
@@ -410,4 +438,8 @@ export const ProductController = {
   getExpiredPromotions,
   getPromotionStats,
   getPromotionDetails,
+  getProductBySlug,
+  getRelatedProducts,
+  getProductReviews,
+  getProductAnalytics,
 };

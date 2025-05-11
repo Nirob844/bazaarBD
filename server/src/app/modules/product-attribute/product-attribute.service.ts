@@ -1,4 +1,4 @@
-import { Prisma, ProductAttribute } from '@prisma/client';
+import { Prisma, PrismaClient, ProductAttribute } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
@@ -58,6 +58,31 @@ const insertIntoDB = async (data: {
   });
 
   return result;
+};
+
+const insertMany = async (
+  tx: PrismaClient | typeof prisma,
+  productId: string,
+  attributes: Array<{
+    attributeId: string;
+    value: string;
+    displayValue?: string;
+    isFilterable?: boolean;
+    isVisible?: boolean;
+    displayOrder?: number;
+  }>
+) => {
+  return tx.productAttribute.createMany({
+    data: attributes.map(attr => ({
+      productId,
+      attributeId: attr.attributeId,
+      value: attr.value,
+      displayValue: attr.displayValue,
+      isFilterable: attr.isFilterable ?? false,
+      isVisible: attr.isVisible ?? true,
+      displayOrder: attr.displayOrder ?? 0,
+    })),
+  });
 };
 
 const bulkInsertIntoDB = async (data: {
@@ -288,6 +313,7 @@ const getProductAttributes = async (
 
 export const ProductAttributeService = {
   insertIntoDB,
+  insertMany,
   bulkInsertIntoDB,
   getAllFromDB,
   getDataById,

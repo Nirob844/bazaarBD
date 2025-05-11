@@ -35,7 +35,7 @@ router.get('/:id/variants', ProductController.getProductVariants);
 router.post(
   '/',
   auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.VENDOR),
-  FileUploadHelper.upload.array('images', 10),
+  FileUploadHelper.upload.single('image'),
   //validateRequest(ProductValidation.create),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = JSON.parse(req.body.data);
@@ -46,12 +46,9 @@ router.post(
 router.patch(
   '/:id',
   auth(ENUM_USER_ROLE.ADMIN, ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.VENDOR),
-  FileUploadHelper.upload.array('images', 10),
+  FileUploadHelper.upload.single('image'),
   validateRequest(ProductValidation.update),
-  (req: Request, res: Response, next: NextFunction) => {
-    req.body = JSON.parse(req.body.data);
-    return ProductController.updateOneInDB(req, res, next);
-  }
+  ProductController.updateOneInDB
 );
 
 router.delete(
@@ -107,5 +104,11 @@ router.patch(
   validateRequest(ProductValidation.update),
   ProductController.updateMarketing
 );
+
+// New routes
+router.get('/slug/:slug', ProductController.getProductBySlug);
+router.get('/:id/related', ProductController.getRelatedProducts);
+router.get('/:id/reviews', ProductController.getProductReviews);
+router.get('/:id/analytics', ProductController.getProductAnalytics);
 
 export const ProductRoutes = router;

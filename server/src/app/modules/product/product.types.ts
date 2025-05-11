@@ -1,10 +1,14 @@
 import {
   Inventory,
   Product,
+  ProductAttribute,
+  ProductImage,
   ProductStatus,
+  ProductTag,
   ProductVariant,
   Promotion,
   PromotionType,
+  Review,
   StockStatus,
 } from '@prisma/client';
 
@@ -131,11 +135,38 @@ export type CreateProductData = {
 };
 
 export type ProductWithRelations = Product & {
-  inventory?: Inventory | null;
-  variants?: (ProductVariant & {
-    inventory?: Inventory | null;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+  };
+  shop: {
+    id: string;
+    name: string;
+    logo: string | null;
+  } | null;
+  vendor: {
+    id: string;
+    businessName: string;
+    businessEmail: string;
+    imageUrl: string | null;
+  };
+  images: ProductImage[];
+  inventory: Inventory | null;
+  attributes: ProductAttribute[];
+  variants: ProductVariant[];
+  tags: ProductTag[];
+  promotions: Promotion[];
+  reviews: (Review & {
+    customer: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string | null;
+      avatar: string | null;
+    };
   })[];
-  promotions?: Promotion[];
 };
 
 export type VendorSelect = {

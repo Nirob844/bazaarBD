@@ -1,4 +1,9 @@
-import { Prisma, ProductVariant, StockStatus } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  ProductVariant,
+  StockStatus,
+} from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
@@ -412,6 +417,116 @@ const getProductVariants = async (
   return result;
 };
 
+const insertMany = async (
+  tx: PrismaClient | typeof prisma,
+  productId: string,
+  variants: Array<{
+    name: string;
+    sku?: string;
+    basePrice?: number;
+    salePrice?: number;
+    costPrice?: number;
+    taxRate?: number;
+    taxClass?: string;
+    minimumOrder?: number;
+    maximumOrder?: number;
+    stockStatus?: StockStatus;
+    isBackorder?: boolean;
+    backorderLimit?: number;
+    weight?: number;
+    dimensions?: string;
+    attributes?: Record<string, any>;
+    imageUrl?: string;
+    barcode?: string;
+    upc?: string;
+    ean?: string;
+    isActive?: boolean;
+    isDefault?: boolean;
+    isVisible?: boolean;
+    inventory?: {
+      stock: number;
+      lowStockThreshold?: number;
+      reorderPoint?: number;
+      reorderQuantity?: number;
+      location?: string;
+      binNumber?: string;
+    };
+  }>
+): Promise<ProductVariant[]> => {
+  const createdVariants = await Promise.all(
+    variants.map(async variant => {
+      const variantData: Prisma.ProductVariantCreateInput = {
+        product: {
+          connect: {
+            id: productId,
+          },
+        },
+        name: variant.name,
+        sku: variant.sku,
+        basePrice: variant.basePrice,
+        salePrice: variant.salePrice,
+        costPrice: variant.costPrice,
+        taxRate: variant.taxRate,
+        taxClass: variant.taxClass,
+        minimumOrder: variant.minimumOrder,
+        maximumOrder: variant.maximumOrder,
+        stockStatus: variant.stockStatus ?? StockStatus.IN_STOCK,
+        isBackorder: variant.isBackorder ?? false,
+        backorderLimit: variant.backorderLimit,
+        weight: variant.weight,
+        dimensions: variant.dimensions,
+        attributes: variant.attributes
+          ? (variant.attributes as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        imageUrl: variant.imageUrl,
+        barcode: variant.barcode,
+        upc: variant.upc,
+        ean: variant.ean,
+        isActive: variant.isActive ?? true,
+        isDefault: variant.isDefault ?? false,
+        isVisible: variant.isVisible ?? true,
+      };
+
+      if (variant.inventory) {
+        return tx.productVariant.create({
+          data: {
+            ...variantData,
+            inventory: {
+              create: {
+                stock: variant.inventory.stock,
+                lowStockThreshold: variant.inventory.lowStockThreshold ?? 5,
+                reorderPoint: variant.inventory.reorderPoint,
+                reorderQuantity: variant.inventory.reorderQuantity,
+                location: variant.inventory.location,
+                binNumber: variant.inventory.binNumber,
+                availableStock: variant.inventory.stock,
+                reservedStock: 0,
+                product: {
+                  connect: {
+                    id: productId,
+                  },
+                },
+              },
+            },
+          },
+          include: {
+            inventory: true,
+          },
+        });
+      }
+
+      return tx.productVariant.create({
+        data: variantData,
+        include: {
+          inventory: true,
+        },
+      });
+    })
+  );
+
+  return createdVariants;
+};
+
 export const ProductVariantService = {
   insertIntoDB,
   bulkInsertIntoDB,
@@ -420,4 +535,5 @@ export const ProductVariantService = {
   updateOneInDB,
   deleteByIdFromDB,
   getProductVariants,
+  insertMany,
 };

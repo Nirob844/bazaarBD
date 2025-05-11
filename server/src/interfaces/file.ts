@@ -38,3 +38,15 @@ export type IUploadFilesMap = {
   banner?: IUploadFile[];
   logo?: IUploadFile[];
 };
+
+export type MulterFile = {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  destination: string;
+  filename: string;
+  path: string;
+  size: number;
+  buffer?: Buffer;
+};

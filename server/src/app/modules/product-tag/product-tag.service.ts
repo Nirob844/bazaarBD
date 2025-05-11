@@ -1,4 +1,4 @@
-import { Prisma, ProductTag } from '@prisma/client';
+import { Prisma, PrismaClient, ProductTag } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
@@ -136,6 +136,24 @@ const getProductsByTag = async (tagId: string): Promise<ProductTag | null> => {
   return result;
 };
 
+const connectOrCreateMany = async (
+  tx: PrismaClient | typeof prisma,
+  productId: string,
+  tags: string[]
+) => {
+  return tx.product.update({
+    where: { id: productId },
+    data: {
+      tags: {
+        connectOrCreate: tags.map(tag => ({
+          where: { name: tag },
+          create: { name: tag },
+        })),
+      },
+    },
+  });
+};
+
 export const ProductTagService = {
   insertIntoDB,
   bulkInsertIntoDB,
@@ -144,4 +162,5 @@ export const ProductTagService = {
   updateOneInDB,
   deleteByIdFromDB,
   getProductsByTag,
+  connectOrCreateMany,
 };

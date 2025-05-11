@@ -1,4 +1,4 @@
-import { Prisma, Promotion, PromotionType } from '@prisma/client';
+import { Prisma, PrismaClient, Promotion, PromotionType } from '@prisma/client';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
@@ -365,8 +365,44 @@ const incrementPromotionUses = async (id: string): Promise<Promotion> => {
   return result;
 };
 
+const insertMany = async (
+  tx: PrismaClient | typeof prisma,
+  productId: string,
+  promotions: Array<{
+    type: any;
+    discountValue: number;
+    isPercentage?: boolean;
+    startDate: Date | string;
+    endDate: Date | string;
+    isActive?: boolean;
+    maxUses?: number;
+    currentUses?: number;
+  }>
+): Promise<Promotion[]> => {
+  const createdPromotions = await Promise.all(
+    promotions.map(promo =>
+      tx.promotion.create({
+        data: {
+          productId,
+          type: promo.type,
+          discountValue: promo.discountValue,
+          isPercentage: promo.isPercentage ?? true,
+          startDate: new Date(promo.startDate),
+          endDate: new Date(promo.endDate),
+          isActive: promo.isActive ?? true,
+          maxUses: promo.maxUses,
+          currentUses: promo.currentUses ?? 0,
+        },
+      })
+    )
+  );
+
+  return createdPromotions;
+};
+
 export const PromotionService = {
   insertIntoDB,
+  insertMany,
   bulkInsertIntoDB,
   getAllFromDB,
   getDataById,

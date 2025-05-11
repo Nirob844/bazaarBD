@@ -1,11 +1,12 @@
 /* eslint-disable no-undef */
 import {
-  Inventory,
+  OrderStatus,
   Prisma,
   Product,
   ProductStatus,
   ProductVariant,
   Promotion,
+  StockStatus,
 } from '@prisma/client';
 import slugify from 'slugify';
 import { FileUploadHelper } from '../../../helpers/fileUploadHelper';
@@ -13,6 +14,12 @@ import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
+import { InventoryService } from '../inventory/inventory.service';
+import { ProductAttributeService } from '../product-attribute/product-attribute.service';
+import { ProductImageService } from '../product-image/product-image.service';
+import { ProductTagService } from '../product-tag/product-tag.service';
+import { ProductVariantService } from '../product-variant/product-variant.service';
+import { PromotionService } from '../promotion/promotion.service';
 import { productSearchableFields } from './product.constant';
 import {
   CreateProductData,
@@ -26,7 +33,6 @@ const insertIntoDB = async (
   data: CreateProductData,
   files?: MulterFile[]
 ): Promise<ProductWithRelations> => {
-  console.log('productData', data);
   const {
     name,
     inventory,
@@ -37,6 +43,11 @@ const insertIntoDB = async (
     promotions,
     ...productData
   } = data;
+
+  // Validate name
+  if (!name || typeof name !== 'string') {
+    throw new Error('Product name is required and must be a string');
+  }
 
   // Generate slug from name
   const slug = slugify(name, { lower: true, strict: true });
@@ -58,139 +69,133 @@ const insertIntoDB = async (
 
   // Create product with all related data in a transaction
   const result = await prisma.$transaction(async tx => {
-    // Create product
-    const product = (await tx.product.create({
+    // 1. Create base product
+    const product = await tx.product.create({
       data: {
         name,
         slug,
         ...productData,
-        // Create product images using proper Prisma types
-        images:
-          allImages.length > 0
-            ? {
-                createMany: {
-                  data: allImages.map((url, index) => ({
-                    url,
-                    isPrimary: index === 0,
-                  })),
-                },
-              }
-            : undefined,
-        // Create inventory with proper types
-        inventory: inventory
-          ? {
-              create: {
-                stock: inventory.stock,
-                lowStockThreshold: inventory.lowStockThreshold ?? 5,
-                reorderPoint: inventory.reorderPoint,
-                reorderQuantity: inventory.reorderQuantity,
-                location: inventory.location,
-                binNumber: inventory.binNumber,
-                //    warehouseId: inventory.warehouseId,
-                availableStock: inventory.stock,
-                reservedStock: 0,
-              },
-            }
-          : undefined,
-        // Create attributes with proper types
-        attributes: attributes
-          ? {
-              createMany: {
-                data: attributes.map(attr => ({
-                  attributeId: attr.attributeId,
-                  value: attr.value,
-                  displayValue: attr.displayValue,
-                  isFilterable: attr.isFilterable ?? false,
-                  isVisible: attr.isVisible ?? true,
-                  displayOrder: attr.displayOrder ?? 0,
-                })),
-              },
-            }
-          : undefined,
-        // Create variants with proper types
-        variants: variants
-          ? {
-              create: variants.map(variant => {
-                const variantData: Prisma.ProductVariantCreateWithoutProductInput =
-                  {
-                    name: variant.name,
-                    sku: variant.sku,
-                    basePrice: variant.basePrice,
-                    salePrice: variant.salePrice,
-                    costPrice: variant.costPrice,
-                    taxRate: variant.taxRate,
-                    taxClass: variant.taxClass,
-                    minimumOrder: variant.minimumOrder,
-                    maximumOrder: variant.maximumOrder,
-                    stockStatus: variant.stockStatus ?? 'IN_STOCK',
-                    isBackorder: variant.isBackorder ?? false,
-                    backorderLimit: variant.backorderLimit,
-                    weight: variant.weight,
-                    dimensions: variant.dimensions,
-                    attributes: variant.attributes,
-                    imageUrl: variant.imageUrl,
-                    barcode: variant.barcode,
-                    upc: variant.upc,
-                    ean: variant.ean,
-                    isActive: variant.isActive ?? true,
-                    isDefault: variant.isDefault ?? false,
-                    isVisible: variant.isVisible ?? true,
-                  };
-
-                // Add inventory if provided
-                if (variant.inventory) {
-                  const {
-                    stock,
-                    lowStockThreshold,
-                    reorderPoint,
-                    reorderQuantity,
-                    location,
-                    binNumber,
-                    warehouseId,
-                  } = variant.inventory;
-                  const inventoryData: any = {
-                    stock,
-                    lowStockThreshold: lowStockThreshold ?? 5,
-                    reorderPoint,
-                    reorderQuantity,
-                    location,
-                    binNumber,
-                    availableStock: stock,
-                    reservedStock: 0,
-                  };
-                  if (warehouseId) inventoryData.warehouseId = warehouseId;
-                  variantData.inventory = { create: inventoryData };
-                }
-
-                return variantData;
-              }),
-            }
-          : undefined,
-        // Create tags with proper types
-        tags: tags
-          ? {
-              connectOrCreate: tags.map(tag => ({
-                where: { name: tag },
-                create: { name: tag },
-              })),
-            }
-          : undefined,
-        // Add promotions creation
-        promotions: promotions
-          ? {
-              create: promotions.map(promo => ({
-                type: promo.type,
-                discountValue: promo.discountValue,
-                isPercentage: promo.isPercentage ?? true,
-                startDate: new Date(promo.startDate),
-                endDate: new Date(promo.endDate),
-                isActive: promo.isActive ?? true,
-                maxUses: promo.maxUses,
-                currentUses: promo.currentUses ?? 0,
-              })),
-            }
-          : undefined,
       },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+          },
+        },
+        vendor: {
+          select: {
+            id: true,
+            businessName: true,
+            businessEmail: true,
+            imageUrl: true,
+          } as VendorSelect,
+        },
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+          } as ShopSelect,
+        },
+      },
+    });
+
+    // 2. Create product images
+    if (allImages.length > 0) {
+      await Promise.all(
+        allImages.map((url, index) =>
+          ProductImageService.insertIntoDB({
+            productId: product.id,
+            url,
+            isPrimary: index === 0,
+          })
+        )
+      );
+    }
+
+    // 3. Create inventory if provided
+    if (inventory) {
+      await InventoryService.insertIntoDB(prisma, {
+        ...inventory,
+        productId: product.id,
+        availableStock: inventory.stock,
+        reservedStock: 0,
+      });
+    }
+
+    // 4. Create attributes if provided
+    if (attributes && attributes.length > 0) {
+      await Promise.all(
+        attributes.map(attr =>
+          ProductAttributeService.insertIntoDB({
+            productId: product.id,
+            attributeId: attr.attributeId,
+            value: attr.value,
+            displayValue: attr.displayValue,
+            isFilterable: attr.isFilterable,
+            isVisible: attr.isVisible,
+            displayOrder: attr.displayOrder,
+          })
+        )
+      );
+    }
+
+    // 5. Create variants if provided
+    if (variants && variants.length > 0) {
+      await Promise.all(
+        variants.map(variant =>
+          ProductVariantService.insertIntoDB({
+            productId: product.id,
+            ...variant,
+          })
+        )
+      );
+    }
+
+    // 6. Create tags if provided
+    if (tags && tags.length > 0) {
+      await Promise.all(
+        tags.map(tag =>
+          ProductTagService.insertIntoDB({
+            name: tag,
+          }).then(tagRecord =>
+            tx.product.update({
+              where: { id: product.id },
+              data: {
+                tags: {
+                  connect: { id: tagRecord.id },
+                },
+              },
+            })
+          )
+        )
+      );
+    }
+
+    // 7. Create promotions if provided
+    if (promotions && promotions.length > 0) {
+      await Promise.all(
+        promotions.map(promo =>
+          PromotionService.insertIntoDB({
+            productId: product.id,
+            type: promo.type,
+            discountValue: promo.discountValue,
+            isPercentage: promo.isPercentage ?? true,
+            startDate: new Date(promo.startDate),
+            endDate: new Date(promo.endDate),
+            isActive: promo.isActive ?? true,
+            maxUses: promo.maxUses,
+          })
+        )
+      );
+    }
+
+    // 8. Fetch complete product with all relations
+    const completeProduct = await tx.product.findUnique({
+      where: { id: product.id },
       include: {
         category: {
           select: {
@@ -245,51 +250,31 @@ const insertIntoDB = async (
         },
         tags: true,
         promotions: true,
-      },
-    })) as ProductWithRelations;
-
-    // Create initial inventory history for main product
-    if (inventory && product.inventory) {
-      await tx.inventoryHistory.create({
-        data: {
-          inventoryId: product.inventory.id,
-          action: 'ADJUSTMENT',
-          quantityChange: inventory.stock,
-          previousStock: 0,
-          newStock: inventory.stock,
-          referenceType: 'INITIAL_STOCK',
-          notes: 'Initial stock setup',
+        reviews: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
         },
-      });
+      },
+    });
+
+    if (!completeProduct) {
+      throw new Error('Failed to create product');
     }
 
-    // Create initial inventory history for variants
-    if (variants && product.variants) {
-      await Promise.all(
-        product.variants.map(
-          async (
-            variant: ProductVariant & { inventory?: Inventory | null },
-            index: number
-          ) => {
-            if (variant.inventory && variants[index].inventory) {
-              await tx.inventoryHistory.create({
-                data: {
-                  inventoryId: variant.inventory.id,
-                  action: 'ADJUSTMENT',
-                  quantityChange: variants[index].inventory!.stock,
-                  previousStock: 0,
-                  newStock: variants[index].inventory!.stock,
-                  referenceType: 'INITIAL_STOCK',
-                  notes: 'Initial stock setup for variant',
-                },
-              });
-            }
-          }
-        )
-      );
-    }
-
-    return product;
+    // Cast to unknown first to avoid type checking issues
+    return completeProduct as unknown as ProductWithRelations;
   });
 
   return result;
@@ -1013,7 +998,7 @@ const updateMarketing = async (
 const getBestSellingProducts = async (
   limit = 10
 ): Promise<ProductWithRelations[]> => {
-  const products = (await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     take: limit,
     orderBy: {
       createdAt: 'desc',
@@ -1089,16 +1074,33 @@ const getBestSellingProducts = async (
           currentUses: true,
         },
       },
+      reviews: {
+        include: {
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              avatar: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
-  })) as unknown as ProductWithRelations[];
+  });
 
-  return products;
+  // Cast to unknown first to avoid type checking issues
+  return products as unknown as ProductWithRelations[];
 };
 
 const getPromotionalProducts = async (
   limit = 10
 ): Promise<ProductWithRelations[]> => {
-  const products = (await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     take: limit,
     where: {
       promotions: {
@@ -1180,10 +1182,27 @@ const getPromotionalProducts = async (
           currentUses: true,
         },
       },
+      reviews: {
+        include: {
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              avatar: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
-  })) as unknown as ProductWithRelations[];
+  });
 
-  return products;
+  // Cast to unknown first to avoid type checking issues
+  return products as unknown as ProductWithRelations[];
 };
 
 // Add new functions for promotional products
@@ -1383,6 +1402,461 @@ const getPromotionDetails = async (promotionId: string) => {
   };
 };
 
+const getProductBySlug = async (
+  slug: string
+): Promise<ProductWithRelations | null> => {
+  const result = await prisma.product.findUnique({
+    where: { slug },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+        },
+      },
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          logo: true,
+        },
+      },
+      vendor: {
+        select: {
+          id: true,
+          businessName: true,
+          businessEmail: true,
+          imageUrl: true,
+        },
+      },
+      images: true,
+      inventory: {
+        include: {
+          warehouse: true,
+          history: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      },
+      attributes: {
+        include: {
+          attribute: true,
+        },
+      },
+      variants: {
+        include: {
+          inventory: {
+            include: {
+              warehouse: true,
+              history: {
+                take: 1,
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          },
+        },
+      },
+      tags: true,
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+      },
+      reviews: {
+        include: {
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              avatar: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+    },
+  });
+
+  if (!result) return null;
+
+  // Increment view count
+  await prisma.product.update({
+    where: { id: result.id },
+    data: {
+      viewCount: {
+        increment: 1,
+      },
+    },
+  });
+
+  // Log the view in audit log
+  await prisma.auditLog.create({
+    data: {
+      entityType: 'Product',
+      entityId: result.id,
+      action: 'VIEW',
+      createdAt: new Date(),
+    },
+  });
+
+  // Cast to unknown first to avoid type checking issues
+  return result as unknown as ProductWithRelations;
+};
+
+const getRelatedProducts = async (
+  productId: string,
+  limit = 4
+): Promise<Product[]> => {
+  // Get the product to find its category and tags
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      categoryId: true,
+      tags: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  // Find related products based on category and tags
+  const relatedProducts = await prisma.product.findMany({
+    where: {
+      id: { not: productId },
+      status: 'PUBLISHED',
+      OR: [
+        { categoryId: product.categoryId },
+        {
+          tags: {
+            some: {
+              id: {
+                in: product.tags.map(tag => tag.id),
+              },
+            },
+          },
+        },
+      ],
+    },
+    take: limit,
+    orderBy: [
+      { featured: 'desc' },
+      { bestSeller: 'desc' },
+      { newArrival: 'desc' },
+      { averageRating: 'desc' },
+      { viewCount: 'desc' },
+    ],
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+        },
+      },
+      vendor: {
+        select: {
+          id: true,
+          businessName: true,
+          businessEmail: true,
+          imageUrl: true,
+        } as VendorSelect,
+      },
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          logo: true,
+        } as ShopSelect,
+      },
+      images: true,
+      inventory: {
+        select: {
+          stock: true,
+          availableStock: true,
+          lowStockThreshold: true,
+        },
+      },
+      attributes: {
+        where: {
+          isVisible: true,
+        },
+        select: {
+          attributeId: true,
+          value: true,
+          displayValue: true,
+        },
+      },
+      variants: {
+        where: {
+          isActive: true,
+          isVisible: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          basePrice: true,
+          salePrice: true,
+          stockStatus: true,
+          imageUrl: true,
+        },
+      },
+      tags: true,
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          type: true,
+          discountValue: true,
+          isPercentage: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+  });
+
+  return relatedProducts;
+};
+
+const getProductReviews = async (
+  productId: string,
+  options: IPaginationOptions
+): Promise<IGenericResponse<any>> => {
+  const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+
+  const reviews = await prisma.review.findMany({
+    where: {
+      productId,
+      isApproved: true,
+    },
+    skip,
+    take: limit,
+    orderBy: {
+      createdAt: 'desc',
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          avatar: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.review.count({
+    where: {
+      productId,
+      isApproved: true,
+    },
+  });
+
+  // Calculate review statistics
+  const stats = await prisma.review.aggregate({
+    where: {
+      productId,
+      isApproved: true,
+    },
+    _avg: {
+      rating: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const ratingDistribution = await prisma.review.groupBy({
+    by: ['rating'],
+    where: {
+      productId,
+      isApproved: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const response = {
+    meta: {
+      total,
+      page,
+      limit,
+      reviewStats: {
+        averageRating: stats._avg.rating || 0,
+        totalReviews: stats._count._all,
+        ratingDistribution: ratingDistribution.reduce(
+          (acc: Record<number, number>, curr) => {
+            acc[curr.rating] = curr._count._all;
+            return acc;
+          },
+          {}
+        ),
+      },
+    },
+    data: reviews,
+  };
+
+  return response;
+};
+
+const getProductAnalytics = async (productId: string) => {
+  // Get basic product data
+  const productData = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      viewCount: true,
+      averageRating: true,
+      createdAt: true,
+    },
+  });
+
+  if (!productData) {
+    throw new Error('Product not found');
+  }
+
+  // Get sales data
+  const salesData = await prisma.orderItem.aggregate({
+    where: {
+      productId,
+      order: {
+        status: OrderStatus.COMPLETED,
+      },
+    },
+    _sum: {
+      quantity: true,
+      total: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  // Get review data
+  const reviewData = await prisma.review.aggregate({
+    where: {
+      productId,
+      isApproved: true,
+    },
+    _avg: {
+      rating: true,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  // Get inventory data
+  const inventoryData = await prisma.inventory.findUnique({
+    where: { productId },
+    select: {
+      stock: true,
+      availableStock: true,
+      reservedStock: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  // Get promotion data
+  const activePromotions = await prisma.promotion.count({
+    where: {
+      productId,
+      isActive: true,
+      startDate: { lte: new Date() },
+      endDate: { gte: new Date() },
+    },
+  });
+
+  // Get view trends (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Get daily views from audit log
+  const viewLogs = await prisma.auditLog.findMany({
+    where: {
+      entityType: 'Product',
+      entityId: productId,
+      action: 'VIEW',
+      createdAt: {
+        gte: thirtyDaysAgo,
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  // Calculate daily views
+  const dailyViews = viewLogs.reduce((acc: Record<string, number>, log) => {
+    const date = log.createdAt.toISOString().split('T')[0];
+    acc[date] = (acc[date] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    product: {
+      id: productData.id,
+      name: productData.name,
+      totalViews: productData.viewCount,
+      averageRating: productData.averageRating,
+      createdAt: productData.createdAt,
+    },
+    sales: {
+      totalQuantity: salesData._sum?.quantity || 0,
+      totalRevenue: salesData._sum?.total || 0,
+      totalOrders: salesData._count?._all || 0,
+    },
+    reviews: {
+      totalReviews: reviewData._count._all,
+      averageRating: reviewData._avg.rating || 0,
+    },
+    inventory: inventoryData
+      ? {
+          currentStock: inventoryData.stock,
+          availableStock: inventoryData.availableStock,
+          reservedStock: inventoryData.reservedStock,
+          lowStockThreshold: inventoryData.lowStockThreshold,
+          stockStatus:
+            inventoryData.availableStock <= inventoryData.lowStockThreshold
+              ? StockStatus.LOW_STOCK
+              : inventoryData.availableStock === 0
+              ? StockStatus.OUT_OF_STOCK
+              : StockStatus.IN_STOCK,
+        }
+      : null,
+    promotions: {
+      activePromotions,
+    },
+    trends: {
+      dailyViews,
+    },
+  };
+};
+
 export const ProductService = {
   insertIntoDB,
   getAllFromDB,
@@ -1406,4 +1880,8 @@ export const ProductService = {
   getExpiredPromotions,
   getPromotionStats,
   getPromotionDetails,
+  getProductBySlug,
+  getRelatedProducts,
+  getProductReviews,
+  getProductAnalytics,
 };
