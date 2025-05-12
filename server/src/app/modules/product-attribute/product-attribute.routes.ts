@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post(
   '/',
-  validateRequest(ProductAttributeValidation.createProductAttributeZodSchema),
+  // validateRequest(ProductAttributeValidation.createProductAttributeZodSchema),
   ProductAttributeController.insertIntoDB
 );
 

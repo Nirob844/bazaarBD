@@ -2,13 +2,14 @@ import express from 'express';
 import { AddressRoutes } from '../modules/address/address.routes';
 import { AdminRoutes } from '../modules/admin/admin.routes';
 import { AdminAnalyticsRoutes } from '../modules/adminAnalytics/adminAnalytics.routes';
-import { ProductAttributeRoutes } from '../modules/attribute/attribute.routes';
 import { AuthRoutes } from '../modules/auth/auth.routes';
 import { CartRoutes } from '../modules/cart/cart.routes';
 import { CategoryRoutes } from '../modules/category/category.routes';
 import { CustomerRoutes } from '../modules/customer/customer.routes';
 import { InventoryRoutes } from '../modules/inventory/inventory.routes';
 import { OrderRoutes } from '../modules/order/order.routes';
+import { ProductAttributeRoutes } from '../modules/product-attribute/product-attribute.routes';
+import { ProductVariantRoutes } from '../modules/product-variant/product-variant.routes';
 import { ProductRoutes } from '../modules/product/product.routes';
 import { ProductImageRoutes } from '../modules/productImage/productImage.routes';
 import { ProfileRoutes } from '../modules/profile/profile.routes';
@@ -18,7 +19,6 @@ import { ShopRoutes } from '../modules/shop/shop.routes';
 import { ShopAnalyticsRoutes } from '../modules/shopAnalytics/shopAnalytics.routes';
 import { ProductTagRoutes } from '../modules/tag/tag.routes';
 import { UserRoutes } from '../modules/user/user.routes';
-import { ProductVariantRoutes } from '../modules/variannt/variant.routes';
 import { VendorRoutes } from '../modules/vendor/vendor.routes';
 import { VendorAnalyticsRoutes } from '../modules/vendorAnalytics/vendorAnalytics.routes';
 import { VerificationCodeRoutes } from '../modules/verificationCode/verificationCode.routes';
@@ -84,11 +84,11 @@ const moduleRoutes = [
     route: PromotionRoutes,
   },
   {
-    path: '/attributes',
+    path: '/product_attributes',
     route: ProductAttributeRoutes,
   },
   {
-    path: '/variants',
+    path: '/product_variants',
     route: ProductVariantRoutes,
   },
   {

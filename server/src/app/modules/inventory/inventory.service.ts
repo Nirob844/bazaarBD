@@ -5,8 +5,13 @@ import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 import { InventoryHistoryService } from '../inventory-history/inventory-history.service';
 
+type PrismaTransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
+
 const insertIntoDB = async (
-  tx: PrismaClient | typeof prisma,
+  tx: PrismaClient | PrismaTransactionClient,
   data: {
     productId: string;
     stock: number;
@@ -20,7 +25,6 @@ const insertIntoDB = async (
     reservedStock: number;
   }
 ) => {
-  console.log(data, 'data');
   const inventory = await tx.inventory.create({
     data: {
       productId: data.productId,
@@ -46,6 +50,55 @@ const insertIntoDB = async (
       newStock: data.stock,
       referenceType: 'INITIAL_STOCK',
       notes: 'Initial stock setup',
+    },
+  });
+
+  return inventory;
+};
+
+const insertIntoDBForVariant = async (
+  tx: PrismaClient | PrismaTransactionClient,
+  data: {
+    productId: string;
+    variantId: string;
+    stock: number;
+    availableStock: number;
+    reservedStock: number;
+    lowStockThreshold?: number;
+    reorderPoint?: number;
+    reorderQuantity?: number;
+    location?: string;
+    binNumber?: string;
+    warehouseId?: string;
+  }
+) => {
+  console.log('inventory variant data', data);
+
+  const inventory = await tx.inventory.create({
+    data: {
+      productId: data.productId,
+      variantId: data.variantId,
+      stock: data.stock,
+      availableStock: data.availableStock,
+      reservedStock: data.reservedStock,
+      lowStockThreshold: data.lowStockThreshold ?? 5,
+      reorderPoint: data.reorderPoint,
+      reorderQuantity: data.reorderQuantity,
+      location: data.location,
+      binNumber: data.binNumber,
+      warehouseId: data.warehouseId,
+    },
+  });
+
+  await tx.inventoryHistory.create({
+    data: {
+      inventoryId: inventory.id,
+      action: 'ADJUSTMENT',
+      quantityChange: data.stock,
+      previousStock: 0,
+      newStock: data.stock,
+      referenceType: 'INITIAL_STOCK',
+      notes: 'Initial stock setup for variant',
     },
   });
 
@@ -358,6 +411,7 @@ const getInventorySummary = async () => {
 
 export const InventoryService = {
   insertIntoDB,
+  insertIntoDBForVariant,
   getAllFromDB,
   getDataById,
   updateOneInDB,

@@ -9,85 +9,126 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
-const insertIntoDB = async (data: {
-  productId: string;
-  name: string;
-  sku?: string;
-  basePrice?: number;
-  salePrice?: number;
-  costPrice?: number;
-  taxRate?: number;
-  taxClass?: string;
-  minimumOrder?: number;
-  maximumOrder?: number;
-  stockStatus?: StockStatus;
-  isBackorder?: boolean;
-  backorderLimit?: number;
-  weight?: number;
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-  attributes: Record<string, any>;
-  imageUrl?: string;
-  barcode?: string;
-  upc?: string;
-  ean?: string;
-  isActive?: boolean;
-  isDefault?: boolean;
-  isVisible?: boolean;
-}): Promise<ProductVariant> => {
-  // Check if product exists
-  const product = await prisma.product.findUnique({
+type PrismaTransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
+
+const insertIntoDB = async (
+  tx: PrismaClient | PrismaTransactionClient,
+  data: {
+    productId: string;
+    name: string;
+    sku?: string;
+    basePrice?: number;
+    salePrice?: number;
+    costPrice?: number;
+    taxRate?: number;
+    taxClass?: string;
+    minimumOrder?: number;
+    maximumOrder?: number;
+    stockStatus?: StockStatus;
+    isBackorder?: boolean;
+    backorderLimit?: number;
+    weight?: number;
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+    };
+    attributes: Record<string, any>;
+    imageUrl?: string;
+    barcode?: string;
+    upc?: string;
+    ean?: string;
+    isActive?: boolean;
+    isDefault?: boolean;
+    isVisible?: boolean;
+    inventory?: {
+      stock: number;
+      lowStockThreshold?: number;
+      reorderPoint?: number;
+      reorderQuantity?: number;
+      location?: string;
+      binNumber?: string;
+    };
+  }
+): Promise<ProductVariant> => {
+  console.log('product variant data', data);
+  // 1. Check if product exists
+  const product = await tx.product.findUnique({
     where: { id: data.productId },
   });
 
-  if (!product) {
-    throw new Error('Product not found');
-  }
+  if (!product) throw new Error('Product not found');
 
-  // Check if SKU is unique if provided
+  // 2. Check SKU uniqueness
   if (data.sku) {
-    const existingVariant = await prisma.productVariant.findUnique({
+    const existingVariant = await tx.productVariant.findUnique({
       where: { sku: data.sku },
     });
-
-    if (existingVariant) {
-      throw new Error('SKU already exists');
-    }
+    if (existingVariant) throw new Error('SKU already exists');
   }
 
-  // If this is the first variant or isDefault is true, set isDefault to true
-  const variantCount = await prisma.productVariant.count({
+  // 3. Handle default variant logic
+  const variantCount = await tx.productVariant.count({
     where: { productId: data.productId },
   });
 
   if (variantCount === 0 || data.isDefault) {
-    // If setting this variant as default, unset any existing default variant
     if (data.isDefault) {
-      await prisma.productVariant.updateMany({
-        where: {
-          productId: data.productId,
-          isDefault: true,
-        },
-        data: {
-          isDefault: false,
-        },
+      await tx.productVariant.updateMany({
+        where: { productId: data.productId, isDefault: true },
+        data: { isDefault: false },
       });
     }
     data.isDefault = true;
   }
 
-  const result = await prisma.productVariant.create({
-    data,
+  // 4. Create ProductVariant
+  const variant = await tx.productVariant.create({
+    data: {
+      productId: data.productId,
+      name: data.name,
+      sku: data.sku,
+      basePrice: data.basePrice,
+      salePrice: data.salePrice,
+      costPrice: data.costPrice,
+      taxRate: data.taxRate,
+      taxClass: data.taxClass,
+      minimumOrder: data.minimumOrder,
+      maximumOrder: data.maximumOrder,
+      stockStatus: data.stockStatus || 'IN_STOCK',
+      isBackorder: data.isBackorder ?? false,
+      backorderLimit: data.backorderLimit,
+      weight: data.weight,
+      dimensions: data.dimensions ? JSON.stringify(data.dimensions) : undefined,
+      attributes: data.attributes,
+      imageUrl: data.imageUrl,
+      barcode: data.barcode,
+      upc: data.upc,
+      ean: data.ean,
+      isActive: data.isActive ?? true,
+      isDefault: data.isDefault ?? false,
+      isVisible: data.isVisible ?? true,
+    },
     include: {
       product: true,
-      inventory: true,
     },
   });
 
-  return result;
+  // 5. Optionally create Inventory
+  // if (data.inventory) {
+  //   await InventoryService.insertIntoDBForVariant(tx, {
+  //     ...data.inventory,
+  //     productId: data.productId,
+  //     variantId: variant.id,
+  //     availableStock: data.inventory.stock,
+  //     reservedStock: 0,
+  //   });
+  // }
+
+  return variant;
 };
 
 const bulkInsertIntoDB = async (data: {

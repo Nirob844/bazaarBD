@@ -15,7 +15,6 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 import { InventoryService } from '../inventory/inventory.service';
-import { ProductAttributeService } from '../product-attribute/product-attribute.service';
 import { ProductImageService } from '../product-image/product-image.service';
 import { ProductTagService } from '../product-tag/product-tag.service';
 import { ProductVariantService } from '../product-variant/product-variant.service';
@@ -118,7 +117,7 @@ const insertIntoDB = async (
 
     // 3. Create inventory if provided
     if (inventory) {
-      await InventoryService.insertIntoDB(prisma, {
+      await InventoryService.insertIntoDB(tx, {
         ...inventory,
         productId: product.id,
         availableStock: inventory.stock,
@@ -127,27 +126,27 @@ const insertIntoDB = async (
     }
 
     // 4. Create attributes if provided
-    if (attributes && attributes.length > 0) {
-      await Promise.all(
-        attributes.map(attr =>
-          ProductAttributeService.insertIntoDB({
-            productId: product.id,
-            attributeId: attr.attributeId,
-            value: attr.value,
-            displayValue: attr.displayValue,
-            isFilterable: attr.isFilterable,
-            isVisible: attr.isVisible,
-            displayOrder: attr.displayOrder,
-          })
-        )
-      );
-    }
+    // if (attributes && attributes.length > 0) {
+    //   await Promise.all(
+    //     attributes.map(attr =>
+    //       ProductAttributeService.insertIntoDB(tx, {
+    //         productId: product.id,
+    //         attributeId: attr.attributeId,
+    //         value: attr.value,
+    //         displayValue: attr.displayValue,
+    //         isFilterable: attr.isFilterable,
+    //         isVisible: attr.isVisible,
+    //         displayOrder: attr.displayOrder,
+    //       })
+    //     )
+    //   );
+    // }
 
     // 5. Create variants if provided
     if (variants && variants.length > 0) {
       await Promise.all(
         variants.map(variant =>
-          ProductVariantService.insertIntoDB({
+          ProductVariantService.insertIntoDB(tx, {
             productId: product.id,
             ...variant,
           })
@@ -155,11 +154,11 @@ const insertIntoDB = async (
       );
     }
 
-    // 6. Create tags if provided
+    // // 6. Create tags if provided
     if (tags && tags.length > 0) {
       await Promise.all(
         tags.map(tag =>
-          ProductTagService.insertIntoDB({
+          ProductTagService.insertIntoDB(tx, {
             name: tag,
           }).then(tagRecord =>
             tx.product.update({
@@ -179,7 +178,7 @@ const insertIntoDB = async (
     if (promotions && promotions.length > 0) {
       await Promise.all(
         promotions.map(promo =>
-          PromotionService.insertIntoDB({
+          PromotionService.insertIntoDB(tx, {
             productId: product.id,
             type: promo.type,
             discountValue: promo.discountValue,
@@ -821,6 +820,11 @@ const deleteByIdFromDB = async (id: string): Promise<Product> => {
     // Delete product promotions
     await tx.promotion.deleteMany({
       where: { productId: id },
+    });
+
+    //Delete product tag
+    await tx.productTag.deleteMany({
+      where: { products: { some: { id } } },
     });
 
     // Delete product tags (this will only remove the relation, not the tags themselves)

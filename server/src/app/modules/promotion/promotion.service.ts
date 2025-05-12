@@ -4,18 +4,33 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
-const insertIntoDB = async (data: {
-  productId: string;
-  type: PromotionType;
-  discountValue: number;
-  isPercentage: boolean;
-  startDate: Date;
-  endDate: Date;
-  isActive?: boolean;
-  maxUses?: number;
-}): Promise<Promotion> => {
+type PrismaTransactionClient = Omit<
+  PrismaClient,
+  | '$connect'
+  | '$disconnect'
+  | '$on'
+  | '$transaction'
+  | '$use'
+  | '$extends'
+  | '$executeRaw'
+>;
+
+const insertIntoDB = async (
+  tx: PrismaClient | PrismaTransactionClient,
+  data: {
+    productId: string;
+    type: PromotionType;
+    discountValue: number;
+    isPercentage: boolean;
+    startDate: Date;
+    endDate: Date;
+    isActive?: boolean;
+    maxUses?: number;
+  }
+): Promise<Promotion> => {
+  console.log('data', data);
   // Check if product exists
-  const product = await prisma.product.findUnique({
+  const product = await tx.product.findUnique({
     where: { id: data.productId },
   });
 
@@ -24,7 +39,7 @@ const insertIntoDB = async (data: {
   }
 
   // Check for overlapping promotions
-  const overlappingPromotion = await prisma.promotion.findFirst({
+  const overlappingPromotion = await tx.promotion.findFirst({
     where: {
       productId: data.productId,
       isActive: true,
@@ -55,7 +70,7 @@ const insertIntoDB = async (data: {
     throw new Error('Overlapping promotion exists for this product');
   }
 
-  const result = await prisma.promotion.create({
+  const result = await tx.promotion.create({
     data,
     include: {
       product: true,

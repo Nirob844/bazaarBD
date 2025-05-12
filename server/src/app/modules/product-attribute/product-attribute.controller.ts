@@ -3,11 +3,12 @@ import httpStatus from 'http-status';
 import { paginationFields } from '../../../constants/pagination';
 import catchAsync from '../../../shared/catchAsync';
 import pick from '../../../shared/pick';
+import prisma from '../../../shared/prisma';
 import sendResponse from '../../../shared/sendResponse';
 import { ProductAttributeService } from './product-attribute.service';
 
 const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
-  const result = await ProductAttributeService.insertIntoDB(req.body);
+  const result = await ProductAttributeService.insertIntoDB(prisma, req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

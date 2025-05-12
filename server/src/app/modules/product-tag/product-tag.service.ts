@@ -4,8 +4,16 @@ import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import prisma from '../../../shared/prisma';
 
-const insertIntoDB = async (data: { name: string }): Promise<ProductTag> => {
-  const result = await prisma.productTag.create({
+type PrismaTransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
+
+const insertIntoDB = async (
+  tx: PrismaClient | PrismaTransactionClient,
+  data: { name: string }
+): Promise<ProductTag> => {
+  const result = await tx.productTag.create({
     data,
     include: {
       products: true,
