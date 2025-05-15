@@ -1,4 +1,5 @@
 import {
+  AttributeType,
   Inventory,
   Product,
   ProductAttribute,
@@ -75,14 +76,31 @@ export type CreateProductData = {
     binNumber?: string;
     warehouseId?: string;
   };
+
   attributes?: Array<{
-    attributeId: string;
-    value: string;
-    displayValue?: string;
+    attribute?: {
+      id?: string; // Use if referencing an existing attribute
+      name: string;
+      type: AttributeType; // This is required!
+      description?: string;
+      isRequired?: boolean;
+      isFilterable?: boolean;
+      isVisible?: boolean;
+      displayOrder?: number;
+      values?: {
+        value: string;
+        displayValue?: string;
+        isDefault?: boolean;
+        displayOrder?: number;
+      }[];
+    };
+    value: string; // The actual value used in the product
+    displayValue?: string; // Optional, for display
     isFilterable?: boolean;
     isVisible?: boolean;
     displayOrder?: number;
   }>;
+
   variants?: Array<{
     name: string;
     sku?: string;

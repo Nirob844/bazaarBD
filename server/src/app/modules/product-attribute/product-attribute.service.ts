@@ -14,7 +14,6 @@ type PrismaTransactionClient = Omit<
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >;
 
-// const insertIntoDB = async (
 //   tx: PrismaClient | PrismaTransactionClient,
 //   data: {
 //     productId: string;
@@ -75,7 +74,7 @@ type PrismaTransactionClient = Omit<
 // };
 
 const insertIntoDB = async (
-  prisma: PrismaClient,
+  tx: PrismaClient | PrismaTransactionClient,
   payload: {
     productId: string;
     attribute?: {
@@ -112,7 +111,7 @@ const insertIntoDB = async (
   } = payload;
 
   // Validate product
-  const product = await prisma.product.findUnique({ where: { id: productId } });
+  const product = await tx.product.findUnique({ where: { id: productId } });
   if (!product) throw new Error('Product not found');
 
   let attributeId: string;
@@ -120,20 +119,20 @@ const insertIntoDB = async (
   // Handle attribute (create or find)
   if (attribute?.id) {
     // Reuse existing attribute
-    const existingAttr = await prisma.attribute.findUnique({
+    const existingAttr = await tx.attribute.findUnique({
       where: { id: attribute.id },
     });
     if (!existingAttr) throw new Error('Attribute not found');
     attributeId = existingAttr.id;
   } else if (attribute?.name && attribute.type) {
     // Try finding existing attribute by name
-    let existingAttr = await prisma.attribute.findUnique({
+    let existingAttr = await tx.attribute.findUnique({
       where: { name: attribute.name },
     });
 
     if (!existingAttr) {
       // Create new attribute
-      existingAttr = await prisma.attribute.create({
+      existingAttr = await tx.attribute.create({
         data: {
           name: attribute.name,
           type: attribute.type,
@@ -154,14 +153,14 @@ const insertIntoDB = async (
       attribute.values?.length
     ) {
       for (const attrValue of attribute.values) {
-        const exists = await prisma.attributeValue.findFirst({
+        const exists = await tx.attributeValue.findFirst({
           where: {
             attributeId,
             value: attrValue.value,
           },
         });
         if (!exists) {
-          await prisma.attributeValue.create({
+          await tx.attributeValue.create({
             data: {
               attributeId,
               value: attrValue.value,
@@ -178,7 +177,7 @@ const insertIntoDB = async (
   }
 
   // Final check for allowed value (if SELECT or MULTISELECT)
-  const attr = await prisma.attribute.findUnique({
+  const attr = await tx.attribute.findUnique({
     where: { id: attributeId },
     include: { values: true },
   });
@@ -192,7 +191,7 @@ const insertIntoDB = async (
   }
 
   // Create ProductAttribute
-  const productAttribute = await prisma.productAttribute.create({
+  const productAttribute = await tx.productAttribute.create({
     data: {
       productId,
       attributeId,
