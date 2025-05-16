@@ -47,4 +47,17 @@ router.delete(
   CartController.deleteCart
 );
 
+// New routes for cart status and coupon management
+router.patch(
+  '/status/:customerId',
+  auth(ENUM_USER_ROLE.CUSTOMER),
+  CartController.updateCartStatus
+);
+
+router.post(
+  '/coupon/:customerId',
+  auth(ENUM_USER_ROLE.CUSTOMER),
+  CartController.applyCoupon
+);
+
 export const CartRoutes = router;

@@ -155,7 +155,7 @@ const insertIntoDB = async (
       );
     }
 
-    // // 6. Create tags if provided
+    // 6. Create tags if provided
     if (tags && tags.length > 0) {
       await Promise.all(
         tags.map(tag =>
@@ -816,11 +816,6 @@ const deleteByIdFromDB = async (id: string): Promise<Product> => {
     // Delete product variants
     await tx.productVariant.deleteMany({
       where: { productId: id },
-    });
-
-    // Delete product Tags relation (handled by disconnecting tags from product)
-    await tx.productTag.deleteMany({
-      where: { products: { some: { id } } },
     });
 
     // Delete product promotions

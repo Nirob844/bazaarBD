@@ -1,4 +1,4 @@
-import { Cart, CartItem } from '@prisma/client';
+import { Cart, CartItem, CartStatus } from '@prisma/client';
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../../shared/catchAsync';
@@ -29,11 +29,12 @@ const getCartByUserId = catchAsync(async (req: Request, res: Response) => {
 
 // Add item to cart
 const addItemToCart = catchAsync(async (req: Request, res: Response) => {
-  const { customerId, productId, quantity } = req.body;
+  const { customerId, productId, quantity, variantId } = req.body;
   const result = await CartService.addItemToCart(
     customerId,
     productId,
-    quantity
+    quantity,
+    variantId
   );
   sendResponse<Cart>(res, {
     statusCode: httpStatus.OK,
@@ -90,6 +91,39 @@ const deleteCart = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Update cart status
+const updateCartStatus = catchAsync(async (req: Request, res: Response) => {
+  const { customerId } = req.params;
+  const { status } = req.body;
+  const result = await CartService.updateCartStatus(
+    customerId,
+    status as CartStatus
+  );
+  sendResponse<Cart>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Cart status updated successfully!',
+    data: result,
+  });
+});
+
+// Apply coupon to cart
+const applyCoupon = catchAsync(async (req: Request, res: Response) => {
+  const { customerId } = req.params;
+  const { couponCode, discount } = req.body;
+  const result = await CartService.applyCoupon(
+    customerId,
+    couponCode,
+    discount
+  );
+  sendResponse<Cart>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Coupon applied successfully!',
+    data: result,
+  });
+});
+
 export const CartController = {
   getOrCreateCart,
   getCartByUserId,
@@ -98,4 +132,6 @@ export const CartController = {
   removeItemFromCart,
   clearCart,
   deleteCart,
+  updateCartStatus,
+  applyCoupon,
 };
